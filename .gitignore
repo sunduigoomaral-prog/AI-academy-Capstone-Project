@@ -26,3 +26,6 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# TypeScript build cache — Nixpacks-ийн cache mount-той зөрчилддөг
+tsconfig.tsbuildinfo

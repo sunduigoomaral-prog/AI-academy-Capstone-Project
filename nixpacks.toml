@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────
+# NIXPACKS — байршуулалтын тохиргоо
+#
+# ⚠️ ЭНЭ ФАЙЛ ЗААВАЛ ХЭРЭГТЭЙ.
+#
+# Репо дотор `package.json` (Next.js) болон `requirements.txt` (Streamlit)
+# ХОЁУЛАА байгаа тул Nixpacks өөрөө сонгохдоо Node.js-ийг барьж авдаг:
+#     setup   → nodejs_18, npm
+#     install → npm ci
+#     build   → npm run build
+#     start   → streamlit run app.py     ← Procfile-аас
+#
+# Ингэснээр Python БОГТ суудаггүй мөртлөө streamlit-ээр асаах гэж оролдож,
+# `streamlit: command not found` алдаа өгнө.
+#
+# Доорх мөр Nixpacks-д «энэ бол PYTHON апп» гэж хэлж, зөвхөн Python
+# provider ажиллуулна:
+#     setup   → python
+#     install → pip install -r requirements.txt
+#     start   → Procfile-ийн `web:` мөр (streamlit run app.py … 8501)
+#
+# Next.js хувилбар (src/, prisma/) нь репо дотор баримт болон хөгжүүлэлтийн
+# зорилгоор үлдэнэ — байршуулалтад ОРОЛЦОХГҮЙ. Тэр нь PostgreSQL шаарддаг
+# тул энэ 3-файлын Streamlit байршуулалтад тохирохгүй.
+# ─────────────────────────────────────────────────────────────────────
+
+providers = ["python"]
+
+[variables]
+  # pandas / streamlit-ийн шаарддаг доод хувилбараас дээгүүр
+  NIXPACKS_PYTHON_VERSION = "3.11"
