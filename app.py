@@ -19,6 +19,7 @@ from __future__ import annotations
 import html
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -39,6 +40,18 @@ from dashboard.view import (  # noqa: E402
     build_view,
     filter_options,
     monthly_sales_series,
+)
+from auth.store import (  # noqa: E402
+    ROLES,
+    USERS_ENV,
+    Attempts,
+    AuthError,
+    User,
+    authenticate,
+    build_users_json,
+    is_configured,
+    load_users,
+    session_ttl,
 )
 from export.collect import collect  # noqa: E402
 from export.excel_export import build_workbook  # noqa: E402
@@ -189,6 +202,26 @@ CSS = """
     border-radius: 0 8px 8px 0; padding: .55rem .8rem;
     font-size: .78rem; color: #92400e; margin-bottom: .7rem;
   }
+
+  /* ── Нэвтрэх дэлгэц ── */
+  .ii-login {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.6rem 1.8rem; margin-top: 1rem;
+  }
+  .ii-login h2 { font-size: 1.25rem; font-weight: 700; color: var(--ink); margin: 0; }
+  .ii-login p  { font-size: .82rem; color: var(--muted); margin: .3rem 0 0; }
+  .ii-user {
+    display: flex; align-items: center; gap: .55rem;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: .55rem .7rem; margin-bottom: .5rem; background: #fbfcfe;
+  }
+  .ii-avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex: none;
+    background: var(--primary); color: #fff; font-weight: 700;
+    font-size: .8rem; display: flex; align-items: center; justify-content: center;
+  }
+  .ii-user .who  { font-size: .82rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
+  .ii-user .role { font-size: .66rem; color: var(--muted); }
 
   /* ── Streamlit удирдлагууд ── */
   section[data-testid="stSidebar"] { background: var(--card); border-right: 1px solid var(--border); }
@@ -823,6 +856,136 @@ def page_quality(view: dict, meta: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Нэвтрэлт
+# ─────────────────────────────────────────────────────────────────────
+
+def render_setup_screen() -> None:
+    """`DSS_USERS` тохируулаагүй үед. ⚠️ Анхны нууц үг ӨГӨХГҮЙ —
+    апп хаалттай хэвээр үлдэж, зөвхөн тохируулах зааврыг харуулна."""
+    st.markdown(
+        "<div class='ii-login'><h2>🔒 Нэвтрэлт тохируулаагүй байна</h2>"
+        f"<p>Систем <b>{esc(USERS_ENV)}</b> орчны хувьсагчаас хэрэглэгчээ уншдаг. "
+        "Тохируулах хүртэл хэн ч нэвтрэхгүй — анхдагч нууц үг гэж байхгүй.</p></div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<div class='ii-warn'>⚠️ Доорх хэрэгсэл нь зөвхөн нууц үгийг "
+        "задлагдахгүй хэлбэрт хөрвүүлнэ — нэвтрэх эрх ОЛГОХГҮЙ.</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='ii-card'><h3>1. Хэрэглэгчийн мөр үүсгэх</h3></div>",
+                unsafe_allow_html=True)
+
+    cols = st.columns([1.2, 1.2, 1, 1.2])
+    username = cols[0].text_input("Нэвтрэх нэр", key="setup_user")
+    password = cols[1].text_input("Нууц үг", type="password", key="setup_pass")
+    role = cols[2].selectbox("Эрх", list(ROLES),
+                             format_func=lambda r: ROLES[r].label_mn, key="setup_role")
+    name = cols[3].text_input("Бүтэн нэр", key="setup_name")
+
+    for code, definition in ROLES.items():
+        st.caption(f"**{definition.label_mn}** ({code}) — {definition.description_mn}")
+
+    if st.button("Үүсгэх", type="primary"):
+        if not username.strip() or not password:
+            st.error("Нэвтрэх нэр ба нууц үгээ бөглөнө үү.")
+        else:
+            st.session_state["setup_json"] = build_users_json(
+                [(username, password, role, name)]
+            )
+
+    generated = st.session_state.get("setup_json")
+    if generated:
+        st.markdown(
+            f"<div class='ii-card'><h3>2. Энэ утгыг <code>{esc(USERS_ENV)}</code> "
+            "орчны хувьсагчид тавь</h3><p class='hint'>Dokploy → Application → "
+            "Environment → Add. Дараа нь Redeploy.</p></div>",
+            unsafe_allow_html=True,
+        )
+        st.code(generated, language="json")
+        st.caption(
+            "Олон хэрэглэгч бол JSON массивын дотор мөрүүдээ хамтад нь нэгтгэ. "
+            "Нууц үг энэ утганд ил бичигдээгүй — зөвхөн PBKDF2 hash."
+        )
+
+
+def render_login_screen(attempts: Attempts) -> None:
+    st.markdown(
+        "<div class='ii-login'><h2>🔐 Нэвтрэх</h2>"
+        "<p>Энэ систем нь дотоод мэдээлэл агуулдаг тул эрхтэй хэрэглэгч "
+        "л нэвтэрнэ.</p></div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.form("login"):
+        username = st.text_input("Нэвтрэх нэр")
+        password = st.text_input("Нууц үг", type="password")
+        submitted = st.form_submit_button("Нэвтрэх", type="primary")
+
+    if not submitted:
+        return
+
+    result = authenticate(username, password, attempts=attempts)
+    if result.user is None:
+        st.error(result.error_mn)
+        return
+
+    st.session_state["user"] = {
+        "username": result.user.username,
+        "display_name": result.user.display_name,
+        "role": result.user.role.code,
+    }
+    st.session_state["login_at"] = time.time()
+    st.rerun()
+
+
+def current_user() -> User | None:
+    """Сессээс хэрэглэгчийг сэргээнэ. Хугацаа дууссан бол гаргана."""
+    stored = st.session_state.get("user")
+    if not stored:
+        return None
+
+    if time.time() - st.session_state.get("login_at", 0) > session_ttl():
+        st.session_state.pop("user", None)
+        st.session_state.pop("login_at", None)
+        return None
+
+    # ⚠️ Хэрэглэгчийг DSS_USERS-ээс ДАХИН шалгана — эрх нь хассан/өөрчилсөн
+    #    бол идэвхтэй сесс шууд хүчингүй болно.
+    try:
+        record = load_users().get(stored["username"])
+    except AuthError:
+        record = None
+    if not record:
+        st.session_state.pop("user", None)
+        return None
+
+    return User(
+        username=record["username"],
+        display_name=record["name"],
+        role=ROLES[record["role"]],
+    )
+
+
+def render_user_box(user: User) -> None:
+    initial = (user.display_name or user.username)[:1].upper()
+    st.markdown(
+        f"<div class='ii-user'>"
+        f"<span class='ii-avatar'>{esc(initial)}</span>"
+        f"<span><span class='who'>{esc(user.display_name)}</span><br>"
+        f"<span class='role'>{esc(user.role.label_mn)}</span></span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    if st.button("Гарах", use_container_width=True):
+        for key in ("user", "login_at", "page"):
+            st.session_state.pop(key, None)
+        st.rerun()
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Навигаци
 # ─────────────────────────────────────────────────────────────────────
 
@@ -853,7 +1016,33 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ── 🔐 НЭВТРЭЛТИЙН ХААЛТ ──
+# ⚠️ Үүнээс доош ямар ч өгөгдөл уншигдахгүй, зурагдахгүй.
+if not is_configured():
+    render_setup_screen()
+    st.stop()
+
+try:
+    load_users()            # тохиргоо эвдэрсэн бол ЭНД илэрнэ
+except AuthError as exc:
+    st.error(f"Нэвтрэлтийн тохиргоо буруу: {exc}")
+    st.stop()
+
+user = current_user()
+if user is None:
+    if "attempts" not in st.session_state:
+        st.session_state["attempts"] = Attempts()
+    render_login_screen(st.session_state["attempts"])
+    st.stop()
+
+# ⚠️ Эрх нь өөрчлөгдсөн байж болно — сонгосон хуудас зөвшөөрөгдөж байгаа эсэхийг
+#    өгөгдөл уншихаас ӨМНӨ шалгана.
+if not user.may_view(st.session_state.get("page", "Dashboard")):
+    st.session_state["page"] = "Dashboard"
+
 with st.sidebar:
+    render_user_box(user)
+
     st.markdown("<div class='ii-navhead'>Өгөгдөл</div>", unsafe_allow_html=True)
     uploaded = st.file_uploader("Excel", type=["xlsx", "xlsm"],
                                 label_visibility="collapsed")
@@ -940,16 +1129,21 @@ with bar[4]:
     )
 
 with bar[5]:
-    try:
-        st.download_button(
-            "⬇️ Excel татах",
-            data=build_excel(file_bytes, uploaded.name),
-            file_name=f"inventory-report-{meta['calculationMonth']}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-    except Exception as exc:  # noqa: BLE001
-        st.warning(f"Excel үүсгэж чадсангүй: {exc}")
+    if not user.role.can_export:
+        # ⚠️ Зөвхөн нуухгүй — өгөгдлийг ОГТ бэлдэхгүй
+        st.button("⬇️ Excel татах", disabled=True, use_container_width=True,
+                  help=f"«{user.role.label_mn}» эрхээр Excel татах боломжгүй")
+    else:
+        try:
+            st.download_button(
+                "⬇️ Excel татах",
+                data=build_excel(file_bytes, uploaded.name),
+                file_name=f"inventory-report-{meta['calculationMonth']}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Excel үүсгэж чадсангүй: {exc}")
 
 flt = Filter(
     product_codes=list(product_codes),
@@ -962,12 +1156,16 @@ view = build_view(data, flt)
 
 # ── Хажуугийн навигаци ──
 with st.sidebar:
+    st.session_state.setdefault("page", "Dashboard")
     for title, items in NAV:
+        # ⚠️ Эрхгүй хуудсыг цэсэнд ОГТ гаргахгүй
+        allowed = [item for item in items if user.may_view(item)]
+        if not allowed:
+            continue
         if title:
             st.markdown(f"<div class='ii-navhead'>{esc(title)}</div>",
                         unsafe_allow_html=True)
-        for item in items:
-            st.session_state.setdefault("page", "Dashboard")
+        for item in allowed:
             if st.button(item, key=f"nav-{item}", use_container_width=True,
                          type="primary" if st.session_state["page"] == item
                          else "secondary"):
@@ -980,6 +1178,11 @@ with st.sidebar:
     )
 
 page = st.session_state.get("page", "Dashboard")
+
+# ⚠️ Цэс нуух нь хангалтгүй — хуудас зурахын ЯГ өмнө эрхийг дахин шалгана
+if not user.may_view(page):
+    st.session_state["page"] = "Dashboard"
+    page = "Dashboard"
 
 if view["scope"]["positions"] == 0:
     page_head(page, "Шүүлтүүрт тохирох байрлал алга", view, meta)
