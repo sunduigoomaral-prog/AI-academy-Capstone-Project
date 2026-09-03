@@ -93,6 +93,7 @@ class Filter:
     company_codes: list[str] = field(default_factory=list)
     location_type: str | None = None
     location_codes: list[str] = field(default_factory=list)
+    manufacturers: list[str] = field(default_factory=list)
 
     @property
     def is_active(self) -> bool:
@@ -101,6 +102,7 @@ class Filter:
             or self.company_codes
             or self.location_type
             or self.location_codes
+            or self.manufacturers
         )
 
     def matches_location(self, location_code: str, location_type: str,
@@ -147,6 +149,9 @@ def filter_options(data: dict) -> dict:
     products = sorted(
         {(r.position.product_code, r.position.product_name) for r in data["inventory"]}
     )
+    manufacturers = sorted(
+        {r.position.manufacturer for r in data["inventory"] if r.position.manufacturer}
+    )
 
     return {
         "companies": [companies[c] for c in sorted(companies)],
@@ -157,6 +162,7 @@ def filter_options(data: dict) -> dict:
         ],
         "locations": [locations[c] for c in sorted(locations)],
         "products": [{"code": c, "name": n} for c, n in products],
+        "manufacturers": manufacturers,
         # ⚠️ Тусдаа сувгийн хэмжээст эх өгөгдөлд БАЙХГҮЙ
         "channels": [],
         "channel_unavailable_reason": CHANNEL_UNAVAILABLE_REASON,
@@ -169,6 +175,69 @@ def filter_options(data: dict) -> dict:
 
 def _share(part: float, whole: float) -> float | None:
     return None if whole <= 0 else part / whole
+
+
+#: §26 — 6 төлөвийг удирдлагад ойлгомжтой 4 бүлэг болгоно.
+#: ⚠️ Энэ бол ХАРАГДАЦЫН бүлэглэл. Үндсэн 6 төлөв хэвээр хадгалагдана.
+RISK_GROUPS: list[dict] = [
+    {"code": "RISK", "label_mn": "Эрсдэлтэй", "hue": "#e5484d",
+     "statuses": ("STOCKOUT_RISK", "LOW_STOCK")},
+    {"code": "WATCH", "label_mn": "Анхаарах", "hue": "#f5a524",
+     "statuses": ("SLOW_MOVING", "NO_MOVEMENT")},
+    {"code": "HEALTHY", "label_mn": "Эрүүл", "hue": "#17a34a",
+     "statuses": ("OPTIMAL",)},
+    {"code": "EXCESS", "label_mn": "Илүүдэлтэй", "hue": "#8b5cf6",
+     "statuses": ("OVERSTOCK",)},
+]
+
+#: Нөөцийн хоногийн бүлэг — дээд хязгаар (сүүлийнх нь хязгааргүй)
+STOCK_DAY_BUCKETS: list[tuple[str, float | None]] = [
+    ("0–7 хоног", 7), ("8–15 хоног", 15), ("16–30 хоног", 30),
+    ("31–60 хоног", 60), ("60+ хоног", None),
+]
+
+
+def risk_groups(rows: list) -> list[dict]:
+    """Төлөв бүрийн байрлалын тоо ба нөөцийн өртгийг 4 бүлгээр."""
+    total_positions = len(rows)
+    out = []
+    for group in RISK_GROUPS:
+        picked = [r for r in rows if r.stock_status in group["statuses"]]
+        out.append({
+            **group,
+            "count": len(picked),
+            "share": _share(len(picked), total_positions),
+            "value": sum(r.position.current_stock_value for r in picked),
+            "quantity": sum(r.balance.current_stock for r in picked),
+        })
+    return out
+
+
+def stock_day_distribution(rows: list) -> list[dict]:
+    """Нөөц хэдэн хоног хүрэлцэхээр байгааг бүлэглэнэ."""
+    counts = {label: 0 for label, _ in STOCK_DAY_BUCKETS}
+    for r in rows:
+        days = r.balance.current_stock_days
+        for label, upper in STOCK_DAY_BUCKETS:
+            if upper is None or days <= upper:
+                counts[label] += 1
+                break
+    peak = max(counts.values()) or 1
+    return [{"label": label, "count": counts[label], "ratio": counts[label] / peak}
+            for label, _ in STOCK_DAY_BUCKETS]
+
+
+def top_rows(rows: list, *, status: tuple[str, ...] | None = None,
+             decision: str | None = None, key=None, limit: int = 10) -> list:
+    """Эрэмбэлсэн эхний N мөр. `key` нь эрэмбэлэх утгыг буцаана."""
+    picked = list(rows)
+    if status:
+        picked = [r for r in picked if r.stock_status in status]
+    if decision:
+        picked = [r for r in picked if r.decision == decision]
+    if key is not None:
+        picked.sort(key=key, reverse=True)
+    return picked[:limit]
 
 
 def _kpis(rows: list, positions: int) -> list[dict]:
@@ -330,6 +399,7 @@ def build_view(data: dict, flt: Filter | None = None) -> dict:
     rows = [
         r for r in data["inventory"]
         if flt.matches_product(r.position.product_code)
+        and (not flt.manufacturers or r.position.manufacturer in flt.manufacturers)
         and flt.matches_location(r.position.location_code, r.position.location_type,
                                  r.position.company_code)
     ]
@@ -383,6 +453,8 @@ def build_view(data: dict, flt: Filter | None = None) -> dict:
         "kpis": _kpis(rows, len(rows)),
         "matrix": _matrix(rows),
         "balance": _balance(rows),
+        "risk_groups": risk_groups(rows),
+        "stock_days": stock_day_distribution(rows),
         "auto_answers": _auto_answers(rows, transfers),
         "rows": rows,
         "transfers": transfers,

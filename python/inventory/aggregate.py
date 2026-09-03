@@ -128,6 +128,7 @@ def build_positions(
                 unit_cost=(value / qty) if qty else None,
                 sales_qty=sales_qty.get((code, location), 0.0),
                 sales_value=sales_value.get((code, location), 0.0),
+                manufacturer=(master.products.get(code) or {}).get("manufacturer_name"),
             )
         )
 

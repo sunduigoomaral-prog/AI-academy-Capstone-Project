@@ -399,6 +399,8 @@ class Position:
     # ── Байрлал тус бүрийн борлуулалт (шүүлттэй KPI-д хэрэгтэй) ──
     sales_qty: float = 0.0
     sales_value: float = 0.0
+    #: Үйлдвэрлэгч — эх өгөгдлийн `Manufacturer` баганаас
+    manufacturer: str | None = None
 
 
 @dataclass

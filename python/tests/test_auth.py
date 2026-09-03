@@ -183,12 +183,13 @@ viewer = authenticate("viewer1", "Үзэгч1", attempts=Attempts(), env=env).us
 
 check("админ бүх хуудас үзнэ",
       all(admin.may_view(p) for p in
-          ("Dashboard", "Үнийн хяналт", "Өгөгдлийн чанар", "AI зөвлөмж")))
+          ("Ерөнхий тойм", "Үнийн хяналт", "Өгөгдлийн чанар", "AI зөвлөмж")))
 check("админ Excel татна", admin.role.can_export)
 check("бүх эрх файл оруулж чадна (нийтийн өгөгдлийн сан байхгүй)",
       not hasattr(admin.role, "can_upload"))
 
-check("үзэгч Dashboard үзнэ", viewer.may_view("Dashboard"))
+check("үзэгч Ерөнхий тойм үзнэ", viewer.may_view("Ерөнхий тойм"))
+check("хуучин нэр «Dashboard» аль хэдийн байхгүй", not viewer.may_view("Dashboard"))
 check("үзэгч ҮНИЙН ХЯНАЛТ үзэхгүй", not viewer.may_view("Үнийн хяналт"))
 check("үзэгч ӨГӨГДЛИЙН ЧАНАР үзэхгүй", not viewer.may_view("Өгөгдлийн чанар"))
 check("үзэгч Excel ТАТАХГҮЙ", not viewer.role.can_export)

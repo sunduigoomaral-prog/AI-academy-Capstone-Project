@@ -42,6 +42,7 @@ from dashboard.view import (  # noqa: E402
     build_view,
     filter_options,
     monthly_sales_series,
+    top_rows,
 )
 from auth.store import (  # noqa: E402
     ROLES,
@@ -75,12 +76,18 @@ st.set_page_config(
 CSS = """
 <style>
   :root {
-    --bg:        #f6f7fb;
+    --bg:        #f4f6fa;
     --card:      #ffffff;
-    --border:    #e6e8f0;
-    --ink:       #0f172a;
-    --muted:     #64748b;
-    --primary:   #4f46e5;
+    --border:    #e8ecf3;
+    --ink:       #1e293b;
+    --muted:     #7c8aa0;
+    --primary:   #2563eb;
+
+    /* Хажуугийн бараан цэс */
+    --nav:       #172a45;
+    --nav-hover: #22385a;
+    --nav-ink:   #c7d5e5;
+    --nav-dim:   #7d93ad;
 
     /* Монос Группын брэнд өнгө — `assets/logo.png`-ээс пиксел
        түвшинд гаргаж авсан (ногоон навч + тэнхлэг хөх үсэг). */
@@ -309,6 +316,203 @@ CSS = """
   .ii-user .who  { font-size: .82rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
   .ii-user .role { font-size: .66rem; color: var(--muted); }
 
+  /* ══ STOCKMIND загвар ══════════════════════════════ */
+
+  /* ── Хажуугийн цэс — бараан ── */
+  section[data-testid="stSidebar"] {
+    background: var(--nav) !important;
+    border-right: none !important;
+    width: 15rem !important;
+  }
+  section[data-testid="stSidebar"] * { color: var(--nav-ink); }
+  section[data-testid="stSidebar"] .block-container { padding: 1.1rem .8rem !important; }
+  .ii-navhead {
+    font-size: .58rem; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--nav-dim) !important;
+    margin: 1.1rem 0 .35rem .3rem;
+  }
+  section[data-testid="stSidebar"] .stButton button {
+    background: transparent; border: none; color: var(--nav-ink);
+    text-align: left; justify-content: flex-start;
+    font-size: .84rem; font-weight: 500; padding: .5rem .7rem;
+    border-radius: 8px; width: 100%;
+  }
+  section[data-testid="stSidebar"] .stButton button:hover {
+    background: var(--nav-hover); color: #fff;
+  }
+  section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+    background: var(--brand); color: #fff; font-weight: 600;
+  }
+  .ii-brandbox {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .2rem .3rem 1rem; margin-bottom: .3rem;
+    border-bottom: 1px solid var(--nav-hover);
+  }
+  .ii-brandbox img { height: 30px; width: auto; background: #fff;
+    border-radius: 6px; padding: 3px 5px; }
+  .ii-brandbox .bn { font-size: .95rem; font-weight: 800; letter-spacing: .04em; color: #fff; }
+  .ii-brandbox .bs { font-size: .55rem; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--nav-dim); }
+  .ii-navfoot {
+    margin-top: 1.4rem; padding-top: .8rem;
+    border-top: 1px solid var(--nav-hover);
+    font-size: .66rem; color: var(--nav-dim); line-height: 1.6;
+  }
+  .ii-navfoot b { color: var(--nav-ink); font-weight: 600; }
+
+  /* ── Дээд мөр ── */
+  .ii-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: .9rem;
+  }
+  .ii-topbar h1 {
+    font-size: 1.35rem; font-weight: 700; color: var(--ink); margin: 0;
+  }
+  .ii-topbar .sub { font-size: .78rem; color: var(--muted); margin: .1rem 0 0; }
+  .ii-pills { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .ii-pill {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: .35rem .7rem;
+    font-size: .74rem; color: var(--muted); white-space: nowrap;
+  }
+  .ii-pill b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ── KPI карт ── */
+  .sm-kpis {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: .7rem; margin-bottom: .9rem;
+  }
+  @media (max-width: 1400px) { .sm-kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 800px)  { .sm-kpis { grid-template-columns: repeat(2, 1fr); } }
+  .sm-kpi {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: .95rem 1rem;
+    box-shadow: 0 1px 3px rgba(16, 30, 54, .04);
+  }
+  .sm-kpi .top {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem;
+  }
+  .sm-kpi .lab {
+    font-size: .64rem; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase;
+  }
+  .sm-kpi .ico {
+    width: 2.3rem; height: 2.3rem; border-radius: 10px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+  }
+  .sm-kpi .val {
+    font-size: 1.42rem; font-weight: 700; color: var(--ink);
+    font-variant-numeric: tabular-nums; line-height: 1.2; margin-top: .5rem;
+  }
+  .sm-kpi .unit { font-size: .68rem; color: var(--muted); margin-top: .1rem; }
+  .sm-kpi .foot {
+    margin-top: .55rem; padding-top: .5rem; border-top: 1px solid var(--border);
+    font-size: .7rem; color: var(--muted);
+  }
+  .sm-kpi .foot b { font-variant-numeric: tabular-nums; }
+
+  /* ── Панел ── */
+  .sm-panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem 1.1rem; height: 100%;
+    box-shadow: 0 1px 3px rgba(16, 30, 54, .04);
+  }
+  .sm-panel h3 {
+    font-size: .92rem; font-weight: 700; color: var(--ink); margin: 0 0 .1rem;
+  }
+  .sm-panel .hint { font-size: .7rem; color: var(--muted); margin: 0 0 .9rem; }
+
+  /* ── Донут ── */
+  .sm-donut-wrap { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; }
+  .sm-donut {
+    width: 138px; height: 138px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sm-donut .hole {
+    width: 88px; height: 88px; border-radius: 50%; background: var(--card);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .sm-donut .hn {
+    font-size: 1.15rem; font-weight: 700; color: var(--ink);
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .sm-donut .hl { font-size: .58rem; color: var(--muted); letter-spacing: .06em; }
+  .sm-legend { display: grid; gap: .5rem; flex: 1; min-width: 9rem; }
+  .sm-leg { display: flex; align-items: center; gap: .5rem; font-size: .76rem; }
+  .sm-leg .sw { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .sm-leg .nm { color: var(--ink); font-weight: 600; }
+  .sm-leg .ct { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ── Босоо баганан диаграм ── */
+  .sm-bars { display: flex; align-items: flex-end; gap: .55rem; height: 148px; }
+  .sm-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+  .sm-bar .n {
+    font-size: .68rem; font-weight: 600; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .sm-bar .col {
+    width: 100%; background: var(--brand); border-radius: 4px 4px 0 0; min-height: 3px;
+  }
+  .sm-xlabels { display: flex; gap: .55rem; margin-top: .4rem; }
+  .sm-xlabels span {
+    flex: 1; text-align: center; font-size: .6rem; color: var(--muted); line-height: 1.25;
+  }
+
+  /* ── Жагсаалтын мөр ── */
+  .sm-list { display: grid; gap: .45rem; }
+  .sm-item {
+    display: flex; align-items: center; gap: .65rem;
+    border: 1px solid var(--border); border-radius: 9px; padding: .55rem .7rem;
+  }
+  .sm-item .ico {
+    width: 1.85rem; height: 1.85rem; border-radius: 7px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: .82rem;
+  }
+  .sm-item .nm { font-size: .78rem; font-weight: 600; color: var(--ink); }
+  .sm-item .rt {
+    margin-left: auto; text-align: right; font-size: .72rem; color: var(--muted);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .sm-item .rt b { display: block; color: var(--ink); font-size: .8rem; }
+
+  /* ── Хүснэгт ── */
+  .sm-tbl { width: 100%; border-collapse: collapse; font-size: .74rem; }
+  .sm-tbl th {
+    font-size: .6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--muted); text-align: left; padding: 0 .5rem .45rem 0;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .sm-tbl td {
+    padding: .42rem .5rem .42rem 0; border-bottom: 1px solid var(--border);
+    color: var(--ink); vertical-align: middle;
+  }
+  .sm-tbl tr:last-child td { border-bottom: none; }
+  .sm-tbl .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sm-tbl .nm {
+    max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sm-chip {
+    display: inline-block; border-radius: 5px; padding: .1em .4em;
+    font-size: .62rem; font-weight: 600; white-space: nowrap;
+  }
+
+  /* ── Доод хураангуй ── */
+  .sm-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: .7rem; margin-top: .9rem; }
+  @media (max-width: 1100px) { .sm-tiles { grid-template-columns: repeat(2, 1fr); } }
+  .sm-tile {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: .85rem 1rem; display: flex; align-items: center; gap: .8rem;
+  }
+  .sm-tile .ico {
+    width: 2.5rem; height: 2.5rem; border-radius: 12px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+  }
+  .sm-tile .lab { font-size: .66rem; color: var(--muted); line-height: 1.35; }
+  .sm-tile .val {
+    font-size: 1.12rem; font-weight: 700; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
   /* ── Streamlit удирдлагууд ── */
   section[data-testid="stSidebar"] { background: var(--card); border-right: 1px solid var(--border); }
   section[data-testid="stSidebar"] .block-container { padding-top: 1rem !important; }
@@ -318,6 +522,7 @@ CSS = """
     font-size: .6rem; font-weight: 700; letter-spacing: .12em;
     text-transform: uppercase; color: var(--muted); margin: .8rem 0 .2rem;
   }
+  .scrollx { overflow-x: auto; }
 </style>
 """
 
@@ -592,75 +797,281 @@ def status_page(view: dict, meta: dict, status: str, title: str, subtitle: str) 
 # Хуудсууд
 # ─────────────────────────────────────────────────────────────────────
 
+def kpi_card(label: str, hue: str, icon: str, value: str,
+             unit: str = "", foot: str = "") -> str:
+    """STOCKMIND загварын KPI карт."""
+    return (
+        f"<div class='sm-kpi'>"
+        f"<div class='top'>"
+        f"<span class='lab' style='color:{hue}'>{esc(label)}</span>"
+        f"<span class='ico' style='background:{hue}1a;color:{hue}'>{icon}</span>"
+        f"</div>"
+        f"<div class='val'>{esc(value)}</div>"
+        f"<div class='unit'>{esc(unit) if unit else '&nbsp;'}</div>"
+        f"<div class='foot'>{foot or '&nbsp;'}</div>"
+        f"</div>"
+    )
+
+
+def render_donut(groups: list[dict], total: int) -> str:
+    """Эрсдэлийн бүлгийн донут — conic-gradient, сан ашиглахгүй."""
+    stops, cursor = [], 0.0
+    for g in groups:
+        # ⚠️ Локал нэр нь модулийн share() форматлагчийг далдлахгүй байх ёстой
+        seg = (g["share"] or 0) * 100
+        stops.append(f"{g['hue']} {cursor:.2f}% {cursor + seg:.2f}%")
+        cursor += seg
+    if cursor < 100:
+        stops.append(f"var(--border) {cursor:.2f}% 100%")
+
+    legend = "".join(
+        f"<div class='sm-leg'>"
+        f"<span class='sw' style='background:{g['hue']}'></span>"
+        f"<span class='nm'>{esc(g['label_mn'])}</span>"
+        f"<span class='ct'>{g['count']:,} · {share(g['share'])}</span>"
+        f"</div>"
+        for g in groups
+    )
+
+    return (
+        f"<div class='sm-donut-wrap'>"
+        f"<div class='sm-donut' style='background:conic-gradient({', '.join(stops)})'>"
+        f"<div class='hole'><span class='hn'>{total:,}</span>"
+        f"<span class='hl'>БАЙРЛАЛ</span></div></div>"
+        f"<div class='sm-legend'>{legend}</div>"
+        f"</div>"
+    )
+
+
+def render_bars(buckets: list[dict]) -> str:
+    """Нөөцийн хоногийн тархалт — CSS баганан диаграм."""
+    bars = "".join(
+        f"<div class='sm-bar'><span class='n'>{b['count']:,}</span>"
+        f"<span class='col' style='height:{max(3, b['ratio'] * 118):.0f}px'></span></div>"
+        for b in buckets
+    )
+    labels = "".join(f"<span>{esc(b['label'])}</span>" for b in buckets)
+    return f"<div class='sm-bars'>{bars}</div><div class='sm-xlabels'>{labels}</div>"
+
+
+def render_table(headers: list[tuple[str, str]], rows: list[list[str]]) -> str:
+    """headers: (нэр, класс) · rows: аль хэдийн форматлагдсан HTML нүднүүд."""
+    head = "".join(
+        f"<th class='{cls}'>{esc(name)}</th>" for name, cls in headers
+    )
+    body = "".join(
+        "<tr>" + "".join(
+            f"<td class='{cls}'>{cell}</td>"
+            for (_, cls), cell in zip(headers, row)
+        ) + "</tr>"
+        for row in rows
+    )
+    if not rows:
+        body = (f"<tr><td colspan='{len(headers)}' style='color:var(--muted);"
+                f"padding:.9rem 0'>Мөр алга.</td></tr>")
+    return f"<div class='scrollx'><table class='sm-tbl'>{head}{body}</table></div>"
+
+
 def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
-    page_head("ABC–XYZ шинжилгээ ба нөөцийн тэнцвэр",
-              "Нөөцийн эрсдэлийг эрт илрүүлэх шийдвэр дэмжих систем", view, meta)
+    scope = view["scope"]
+    groups = view["risk_groups"]
+    rows = view["rows"]
+    total_value = sum(r.position.current_stock_value for r in rows)
 
-    render_kpi_grid(view["kpis"])
-
-    left, right = st.columns([3, 2], gap="small")
-
-    with left:
-        st.markdown(
-            "<div class='ii-card'><h3>ABC–XYZ матриц</h3>"
-            "<p class='hint'>⭐ 9 хосолсон ангилал нь нөөцийн бүх тооцооллын үндэс. "
-            f"Нийт {view['scope']['skus']:,} SKU.</p></div>",
-            unsafe_allow_html=True,
-        )
-        render_matrix(view["matrix"])
-
-        series = monthly_sales_series(data, flt)
-        st.markdown(
-            "<div class='ii-card'><h3>Сар бүрийн борлуулалт (ш)</h3></div>",
-            unsafe_allow_html=True,
-        )
-        if series and series[0]["partial"]:
-            st.markdown(
-                "<div class='ii-warn'>⚠️ Сарын задаргаа нь SKU түвшинд хадгалагддаг "
-                "тул байршлын шүүлтүүрийг дагахгүй — энэ график бүх байршлыг "
-                "хамарна.</div>",
-                unsafe_allow_html=True,
-            )
-        st.bar_chart(
-            pd.DataFrame(series).set_index("period")["quantity"],
-            height=210, color="#4f46e5",
-        )
-
-    with right:
-        st.markdown(
-            "<div class='ii-card'><h3>Нөөцийн тэнцвэр</h3>"
-            "<p class='hint'>Төлөв тус бүрийн байрлалын тоо, эзлэх хувь, "
-            "тоо хэмжээ, өртөг</p></div>",
-            unsafe_allow_html=True,
-        )
-        render_balance_panel(view["balance"])
-
-        st.markdown(
-            "<div class='ii-card'><h3>Шилжүүлгийн шатлал</h3>"
-            "<p class='hint'>Дутагдлыг эхний шатнаас эхлэн нөхнө</p></div>",
-            unsafe_allow_html=True,
-        )
-        tiers = view["transfer_tiers"]
-        if not tiers:
-            st.info("Шилжүүлэх боломж илрээгүй.")
-        else:
-            total = sum(t["quantity"] for t in tiers)
-            rows = [
-                f"<div class='ii-bal' style='background:#f8fafc'>"
-                f"<span class='n'>{t['quantity']:,}</span>"
-                f"<span class='p'>{share(t['quantity'] / total if total else None)}</span>"
-                f"<span class='v'>{esc(t['label_mn'])}</span></div>"
-                for t in tiers
-            ]
-            st.markdown("".join(rows), unsafe_allow_html=True)
-
+    # ── Дээд мөр ──
     st.markdown(
-        "<div class='ii-card'><h3>Систем автоматаар хариулна</h3>"
-        "<p class='hint'>Удирдлагын үндсэн асуултууд — бүгд шүүсэн "
-        "хамрах хүрээгээр</p></div>",
+        f"<div class='ii-topbar'><div>"
+        f"<h1>Ерөнхий тойм</h1>"
+        f"<p class='sub'>Нөөцийн эрсдэлийг эрт илрүүлэх шийдвэр дэмжих систем</p>"
+        f"</div><div class='ii-pills'>"
+        f"<span class='ii-pill'>Тооцооны сар <b>{esc(meta['calculationMonth'])}</b></span>"
+        f"<span class='ii-pill'><b>{esc(meta['periods'][0])}</b> … "
+        f"<b>{esc(meta['periods'][-1])}</b></span>"
+        f"<span class='ii-pill'><b>{scope['skus']:,}</b> SKU</span>"
+        f"<span class='ii-pill'><b>{scope['positions']:,}</b> байрлал</span>"
+        f"</div></div>",
         unsafe_allow_html=True,
     )
-    render_auto_answers(view["auto_answers"])
+
+    if view["filter_active"]:
+        st.markdown(
+            "<div class='ii-note'>Шүүлтүүр идэвхтэй — бүх үзүүлэлт энэ "
+            "хамрах хүрээгээр тооцогдож байна.</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── KPI мөр ──
+    cards = [kpi_card("Нийт", "#2563eb", "📦", f"{total_value:,.0f} ₮",
+                      f"{sum(r.balance.current_stock for r in rows):,.0f} ширхэг",
+                      f"<b>{scope['positions']:,}</b> байрлал")]
+    for g in groups:
+        cards.append(kpi_card(
+            g["label_mn"], g["hue"],
+            {"RISK": "⚠️", "WATCH": "🕐", "HEALTHY": "✅", "EXCESS": "📚"}[g["code"]],
+            f"{g['value']:,.0f} ₮",
+            f"{g['quantity']:,.0f} ширхэг",
+            f"<b>{g['count']:,}</b> байрлал · {share(g['share'])}",
+        ))
+    st.markdown(f"<div class='sm-kpis'>{''.join(cards)}</div>", unsafe_allow_html=True)
+
+    # ── Донут · баганан · AI тойм ──
+    c1, c2, c3 = st.columns([1.05, 1.05, 1], gap="small")
+
+    with c1:
+        st.markdown(
+            "<div class='sm-panel'><h3>Нөөцийн эрсдэлийн статус</h3>"
+            "<p class='hint'>Байрлалын тоогоор</p>"
+            + render_donut(groups, scope["positions"]) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+    with c2:
+        st.markdown(
+            "<div class='sm-panel'><h3>Нөөц хэдэн хоног хүрэлцэх</h3>"
+            "<p class='hint'>Байрлалын тоогоор</p>"
+            + render_bars(view["stock_days"]) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+    with c3:
+        recs = view["recommendations"]
+        transfer_qty = sum(t.quantity for t in view["transfers"])
+        purchase_qty = sum(r.new_purchase_qty for r in rows)
+        saving = sum(b.potential_saving or 0 for b in view["benchmarks"])
+        stagnant = [r for r in rows if r.stock_status == "NO_MOVEMENT"]
+
+        items = [
+            ("🔁", "Шилжүүлэх санал", "#2563eb",
+             f"{len({t.product_code for t in view['transfers']}):,} SKU",
+             f"{transfer_qty:,} ш"),
+            ("🛒", "Захиалах санал", "#17a34a",
+             f"{len({r.position.product_code for r in rows if r.new_purchase_qty > 0}):,} SKU",
+             f"{purchase_qty:,} ш"),
+            ("🏷️", "Үнэ анхааруулга", "#f5a524",
+             f"{len(view['margin_risk_codes']):,} SKU",
+             f"{saving:,.0f} ₮"),
+            ("🕐", "Хөдөлгөөнгүй SKU", "#8b5cf6",
+             f"{len({r.position.product_code for r in stagnant}):,} SKU",
+             f"{sum(r.position.current_stock_value for r in stagnant):,.0f} ₮"),
+        ]
+        body = "".join(
+            f"<div class='sm-item'>"
+            f"<span class='ico' style='background:{hue}1a;color:{hue}'>{icon}</span>"
+            f"<span class='nm'>{esc(name)}</span>"
+            f"<span class='rt'>{esc(sub)}<b>{esc(val)}</b></span></div>"
+            for icon, name, hue, sub, val in items
+        )
+        crit = sum(1 for r in recs if r["priority"] == "CRITICAL")
+        st.markdown(
+            "<div class='sm-panel'><h3>AI зөвлөмжийн тойм</h3>"
+            f"<p class='hint'>Дүрэмд суурилсан engine · {crit:,} нэн яаралтай</p>"
+            f"<div class='sm-list'>{body}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── ТОП 10 хүснэгтүүд ──
+    t1, t2, t3 = st.columns(3, gap="small")
+
+    with t1:
+        picked = top_rows(rows, status=("STOCKOUT_RISK", "LOW_STOCK"),
+                          key=lambda r: r.shortage_value or 0)
+        body = [[
+            f"<span class='nm' title='{esc(r.position.product_name or '')}'>"
+            f"{esc(r.position.product_code)}</span>",
+            esc(r.position.location_code),
+            f"{r.balance.shortage:,.0f}",
+            f"{r.shortage_value or 0:,.0f}",
+            f"<span class='sm-chip' style='background:"
+            f"{STATUS_TONE[r.stock_status]['bg']};"
+            f"color:{STATUS_TONE[r.stock_status]['fg']}'>"
+            f"{r.balance.current_stock_days:,.0f} хон</span>",
+        ] for r in picked]
+        st.markdown(
+            "<div class='sm-panel'><h3>Эрсдэлтэй ТОП 10</h3>"
+            "<p class='hint'>Дутагдлын мөнгөн дүнгээр</p>"
+            + render_table([("SKU", "nm"), ("Байршил", ""), ("Дутагдал", "num"),
+                            ("Дүн ₮", "num"), ("Нөөц", "num")], body)
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+
+    with t2:
+        picked = sorted(view["transfers"], key=lambda t: -t.quantity)[:10]
+        body = [[
+            f"<span class='nm' title='{esc(view['name_by_code'].get(t.product_code) or '')}'>"
+            f"{esc(t.product_code)}</span>",
+            esc(t.from_location_code),
+            esc(t.to_location_code),
+            f"{t.quantity:,}",
+            f"{t.estimated_value:,.0f}" if t.estimated_value is not None else NOT_AVAILABLE,
+        ] for t in picked]
+        st.markdown(
+            "<div class='sm-panel'><h3>Шилжүүлэх ТОП 10</h3>"
+            "<p class='hint'>Компани доторхыг эхэлж ашиглана</p>"
+            + render_table([("SKU", "nm"), ("Хаанаас", ""), ("Хаашаа", ""),
+                            ("Тоо", "num"), ("Дүн ₮", "num")], body)
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+
+    with t3:
+        picked = top_rows(rows, key=lambda r: r.new_purchase_qty)
+        picked = [r for r in picked if r.new_purchase_qty > 0]
+        bench = {b.product_code: b for b in view["benchmarks"]}
+        body = []
+        for r in picked:
+            b = bench.get(r.position.product_code)
+            body.append([
+                f"<span class='nm' title='{esc(r.position.product_name or '')}'>"
+                f"{esc(r.position.product_code)}</span>",
+                f"<span class='nm'>{esc(b.min_source_key)}</span>" if b and b.min_source_key
+                else f"<span style='color:var(--muted)'>{NOT_AVAILABLE}</span>",
+                f"{b.min_unit_price:,.0f}" if b and b.min_unit_price is not None
+                else NOT_AVAILABLE,
+                f"{r.new_purchase_qty:,}",
+            ])
+        st.markdown(
+            "<div class='sm-panel'><h3>Захиалах ТОП 10</h3>"
+            "<p class='hint'>Хамгийн хямд нийлүүлэгчтэй нь</p>"
+            + render_table([("SKU", "nm"), ("Нийлүүлэгч", "nm"),
+                            ("Хамгийн бага ₮", "num"), ("Захиалах", "num")], body)
+            + "</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── Доод хураангуй ──
+    shortage_value = sum(r.shortage_value or 0 for r in rows)
+    excess_value = sum(r.excess_value or 0 for r in rows)
+    tiles = [
+        ("❄️", "#2563eb", "Нийт нөөцийн тоо хэмжээ",
+         f"{sum(r.balance.current_stock for r in rows):,.0f} ш"),
+        ("⚖️", "#17a34a", "Нийт нөөцийн өртөг", f"{total_value:,.0f} ₮"),
+        ("🔁", "#8b5cf6", "Шилжүүлгээр хаагдах дутагдал",
+         f"{sum(r.transfer_in_qty for r in rows):,} ш"),
+        ("📥", "#f5a524", "Захиалах шаардлагатай", f"{purchase_qty:,} ш"),
+    ]
+    st.markdown(
+        "<div class='sm-tiles'>"
+        + "".join(
+            f"<div class='sm-tile'>"
+            f"<span class='ico' style='background:{hue}1a;color:{hue}'>{icon}</span>"
+            f"<span><span class='lab'>{esc(lab)}</span><br>"
+            f"<span class='val'>{esc(val)}</span></span></div>"
+            for icon, hue, lab, val in tiles
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"<div class='ii-note' style='margin-top:.9rem'>"
+        f"Дутагдлын нийт дүн <b>{shortage_value:,.0f} ₮</b> · "
+        f"илүүдлийн нийт дүн <b>{excess_value:,.0f} ₮</b>. "
+        f"⚠️ Ашгийн үзүүлэлт — эх өгөгдөлд борлуулалтын орлого байхгүй тул "
+        f"<b>{NOT_AVAILABLE}</b>."
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def page_inventory_overview(view: dict, meta: dict) -> None:
@@ -1195,7 +1606,7 @@ def render_user_box(user: User) -> None:
 # ─────────────────────────────────────────────────────────────────────
 
 NAV: list[tuple[str | None, list[str]]] = [
-    (None, ["Dashboard"]),
+    (None, ["Ерөнхий тойм"]),
     ("Нөөц", ["Нөөцийн ерөнхий байдал", "Нөөцийн эрсдэл", "Илүүдэл",
              "Хөдөлгөөнгүй", "Удаан эргэлт"]),
     ("ABC–XYZ", ["ABCXYZ шинжилгээ", "ABCXYZ матриц"]),
@@ -1246,10 +1657,19 @@ if user is None:
 
 # ⚠️ Эрх нь өөрчлөгдсөн байж болно — сонгосон хуудас зөвшөөрөгдөж байгаа эсэхийг
 #    өгөгдөл уншихаас ӨМНӨ шалгана.
-if not user.may_view(st.session_state.get("page", "Dashboard")):
-    st.session_state["page"] = "Dashboard"
+if not user.may_view(st.session_state.get("page", "Ерөнхий тойм")):
+    st.session_state["page"] = "Ерөнхий тойм"
 
 with st.sidebar:
+    _nav_logo = logo_data_uri()
+    st.markdown(
+        "<div class='ii-brandbox'>"
+        + (f"<img src='{_nav_logo}' alt='{esc(ORG_NAME)}'>" if _nav_logo else "")
+        + "<span><span class='bn'>STOCKMIND</span><br>"
+          "<span class='bs'>Inventory Decision Support</span></span></div>",
+        unsafe_allow_html=True,
+    )
+
     render_user_box(user)
 
     st.markdown("<div class='ii-navhead'>Өгөгдөл</div>", unsafe_allow_html=True)
@@ -1282,7 +1702,7 @@ meta = data["meta"]
 options = filter_options(data)
 
 # ── Шүүлтүүрийн мөр ──
-bar = st.columns([1.6, 1.2, 1.1, 1.4, 1.1, 1.0])
+bar = st.columns([1.5, 1.2, 1.0, 1.0, 1.3, 1.0])
 
 product_name_by_code = {p["code"]: p["name"] for p in options["products"]}
 
@@ -1329,11 +1749,10 @@ with bar[3]:
     )
 
 with bar[4]:
-    st.selectbox(
-        "Суваг",
-        options=[f"Тусдаа суваг — {NOT_AVAILABLE}"],
-        disabled=True,
-        help=options["channel_unavailable_reason"],
+    manufacturer = st.selectbox(
+        "Үйлдвэрлэгч",
+        options=[None] + options["manufacturers"],
+        format_func=lambda m: "Бүх үйлдвэрлэгч" if m is None else m,
         label_visibility="collapsed",
     )
 
@@ -1359,13 +1778,14 @@ flt = Filter(
     company_codes=[company] if company else [],
     location_type=loc_type,
     location_codes=[location] if location else [],
+    manufacturers=[manufacturer] if manufacturer else [],
 )
 
 view = build_view(data, flt)
 
 # ── Хажуугийн навигаци ──
 with st.sidebar:
-    st.session_state.setdefault("page", "Dashboard")
+    st.session_state.setdefault("page", "Ерөнхий тойм")
     for title, items in NAV:
         # ⚠️ Эрхгүй хуудсыг цэсэнд ОГТ гаргахгүй
         allowed = [item for item in items if user.may_view(item)]
@@ -1380,25 +1800,26 @@ with st.sidebar:
                          else "secondary"):
                 st.session_state["page"] = item
 
-    st.markdown("<div class='ii-navhead'>Тохиргоо</div>", unsafe_allow_html=True)
-    st.caption(
-        "Босго утга, зорилтот хоног `src/config/*.json`-оос уншигдана — "
-        "кодод hardcode байхгүй."
+    st.markdown(
+        f"<div class='ii-navfoot'>Тооцооны сар <b>{esc(meta['calculationMonth'])}</b><br>"
+        f"Эх файл <b>{esc(meta['sourceFile'])}</b><br>"
+        f"Босго утга <b>src/config/*.json</b></div>",
+        unsafe_allow_html=True,
     )
 
-page = st.session_state.get("page", "Dashboard")
+page = st.session_state.get("page", "Ерөнхий тойм")
 
 # ⚠️ Цэс нуух нь хангалтгүй — хуудас зурахын ЯГ өмнө эрхийг дахин шалгана
 if not user.may_view(page):
-    st.session_state["page"] = "Dashboard"
-    page = "Dashboard"
+    st.session_state["page"] = "Ерөнхий тойм"
+    page = "Ерөнхий тойм"
 
 if view["scope"]["positions"] == 0:
     page_head(page, "Шүүлтүүрт тохирох байрлал алга", view, meta)
     st.warning("Сонгосон хамрах хүрээнд өгөгдөл олдсонгүй. Шүүлтүүрээ өөрчилнө үү.")
     st.stop()
 
-if page == "Dashboard":
+if page == "Ерөнхий тойм":
     page_dashboard(view, data, meta, flt)
 elif page == "Нөөцийн ерөнхий байдал":
     page_inventory_overview(view, meta)
