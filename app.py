@@ -1005,10 +1005,13 @@ def render_brand_pane() -> None:
         f"<span class='txt'>{text}</span></div>"
         for icon, text in BRAND_FEATURES
     )
+    # ⚠️ f-string ДОТОР ижил хашилт бичихгүй — Python 3.12+ дээр л ажиллана,
+    #    байршуулалт 3.11 дээр явдаг (`nixpacks.toml`). Тусад нь бодно.
+    logo_class = "logo has-img" if logo_data_uri(True) else "logo"
     st.markdown(
         f"<div class='ii-brandpane'>"
         f"<div>"
-        f"<div class='logo{" has-img" if logo_data_uri(True) else ""}'>"
+        f"<div class='{logo_class}'>"
         f"{brand_logo(44, on_dark=True)}</div>"
         f"<h1>Нөөцийн ухаалаг<br>шийдвэр дэмжих систем</h1>"
         f"<p class='lede'>Борлуулалт, худалдан авалт, үлдэгдлийн өгөгдлийг "
