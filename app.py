@@ -218,69 +218,35 @@ CSS = """
   .ii-login h2 { font-size: 1.25rem; font-weight: 700; color: var(--ink); margin: 0; }
   .ii-login p  { font-size: .82rem; color: var(--muted); margin: .3rem 0 0; }
 
-  /* ── Брэндийн самбар (нэвтрэх дэлгэцийн зүүн тал) ── */
-  .ii-brandpane {
-    background: linear-gradient(150deg, var(--brand) 0%, var(--brand-2) 100%);
-    border-radius: 18px; padding: 2.1rem 2rem 1.6rem;
-    color: #fff; min-height: 460px;
-    display: flex; flex-direction: column; justify-content: space-between;
-    box-shadow: 0 18px 40px -22px rgba(15, 23, 42, .55);
+  /* ── Нэвтрэх карт — товч, төвлөрсөн ── */
+  .ii-authcard {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem 1.9rem 1.5rem;
+    box-shadow: 0 20px 44px -28px rgba(15, 23, 42, .45);
+    margin-top: 2.2rem;
   }
-  .ii-brandpane .logo { margin-bottom: 1.5rem; }
-  /* ⚠️ Логоны үсэг нь тэнхлэг хөх тул бараан дэвсгэр дээр уншигдахгүй.
-     Албан ёсны тэмдгийг ӨӨРЧЛӨХГҮЙГЭЭР цагаан суурин дээр байрлуулна. */
-  .ii-brandpane .logo.has-img {
-    background: #fff; border-radius: 12px;
-    padding: .6rem .85rem; display: inline-block;
-    box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .35);
+  .ii-authcard .logo { margin-bottom: 1.3rem; }
+  .ii-authcard .logo img { height: 42px; width: auto; display: block; }
+  .ii-authcard h2 {
+    font-size: 1.35rem; font-weight: 700; color: var(--ink); margin: 0;
   }
-  .ii-brandpane .logo img { height: 44px; width: auto; display: block; }
+  .ii-authcard p.sub {
+    font-size: .8rem; color: var(--muted); margin: .3rem 0 1.1rem; line-height: 1.5;
+  }
+  .ii-authcard .note {
+    font-size: .68rem; color: var(--muted); line-height: 1.5;
+    border-top: 1px solid var(--border); padding-top: .75rem; margin-top: 1.1rem;
+  }
   .ii-wordmark {
-    font-size: 1.7rem; font-weight: 800; letter-spacing: .22em;
-    line-height: 1; color: #fff;
+    font-size: 1.5rem; font-weight: 800; letter-spacing: .2em;
+    line-height: 1; color: var(--brand-2);
   }
   .ii-wordmark-sub {
-    font-size: .58rem; letter-spacing: .2em; text-transform: uppercase;
-    color: rgba(255, 255, 255, .68); margin-top: .35rem;
-  }
-  .ii-brandpane h1 {
-    font-size: 1.6rem; font-weight: 700; line-height: 1.25;
-    margin: 0 0 .5rem; color: #fff;
-  }
-  .ii-brandpane .lede {
-    font-size: .84rem; line-height: 1.55; color: rgba(255, 255, 255, .8);
-    margin: 0 0 1.4rem; max-width: 34ch;
-  }
-  .ii-feat { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .6rem; }
-  .ii-feat .ico {
-    width: 26px; height: 26px; border-radius: 8px; flex: none;
-    background: rgba(255, 255, 255, .14); display: flex;
-    align-items: center; justify-content: center; font-size: .8rem;
-  }
-  .ii-feat .txt { font-size: .78rem; line-height: 1.4; color: rgba(255, 255, 255, .9); }
-  .ii-feat .txt b { color: #fff; font-weight: 600; }
-  .ii-brandfoot {
-    font-size: .66rem; color: rgba(255, 255, 255, .55);
-    border-top: 1px solid rgba(255, 255, 255, .16);
-    padding-top: .8rem; margin-top: 1.2rem;
+    font-size: .55rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--muted); margin-top: .3rem;
   }
 
-  /* ── Нэвтрэх маягт (баруун тал) ── */
-  .ii-formpane { padding: 1.6rem .4rem 0 1.4rem; }
-  .ii-formpane .eyebrow {
-    font-size: .6rem; font-weight: 700; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--brand); margin-bottom: .4rem;
-  }
-  .ii-formpane h2 { font-size: 1.55rem; font-weight: 700; color: var(--ink); margin: 0; }
-  .ii-formpane p.sub {
-    font-size: .82rem; color: var(--muted); margin: .35rem 0 1.2rem; line-height: 1.5;
-  }
-  .ii-formpane .note {
-    font-size: .7rem; color: var(--muted); line-height: 1.5;
-    border-top: 1px solid var(--border); padding-top: .8rem; margin-top: 1.2rem;
-  }
-
-  /* Нэвтрэх дэлгэц дээр талбарууд том, тод */
+  /* Нэвтрэх дэлгэцийн талбарууд том, тод */
   .ii-auth div[data-testid="stTextInput"] input {
     height: 2.7rem; font-size: .9rem; border-radius: 10px;
   }
@@ -295,18 +261,6 @@ CSS = """
   }
   /* Нэвтрээгүй үед хажуугийн самбар хэрэггүй */
   .ii-auth-page section[data-testid="stSidebar"] { display: none !important; }
-  .ii-user {
-    display: flex; align-items: center; gap: .55rem;
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: .55rem .7rem; margin-bottom: .5rem; background: #fbfcfe;
-  }
-  .ii-avatar {
-    width: 30px; height: 30px; border-radius: 50%; flex: none;
-    background: var(--primary); color: #fff; font-weight: 700;
-    font-size: .8rem; display: flex; align-items: center; justify-content: center;
-  }
-  .ii-user .who  { font-size: .82rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
-  .ii-user .role { font-size: .66rem; color: var(--muted); }
 
   /* ── Streamlit удирдлагууд ── */
   section[data-testid="stSidebar"] { background: var(--card); border-right: 1px solid var(--border); }
@@ -372,8 +326,6 @@ ORG_NAME = os.environ.get("DSS_ORG_NAME", "Монос ХХК")
 
 ASSETS_DIR = PROJECT_ROOT / "assets"
 
-#: Бараан дэвсгэрт эхлээд `logo-light.*`, дараа нь энгийн логог хайна
-_LOGO_STEMS = {"dark": ("logo-light", "logo"), "light": ("logo", "logo-light")}
 _LOGO_TYPES = {
     ".svg": "image/svg+xml", ".png": "image/png",
     ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -381,25 +333,27 @@ _LOGO_TYPES = {
 
 
 @st.cache_data(show_spinner=False)
-def logo_data_uri(on_dark: bool) -> str | None:
-    """`assets/` доторх логог base64 болгож буцаана. Байхгүй бол None."""
-    for stem in _LOGO_STEMS["dark" if on_dark else "light"]:
-        for suffix, mime in _LOGO_TYPES.items():
-            path = ASSETS_DIR / f"{stem}{suffix}"
-            if path.is_file():
-                encoded = base64.b64encode(path.read_bytes()).decode("ascii")
-                return f"data:{mime};base64,{encoded}"
+def logo_data_uri() -> str | None:
+    """`assets/logo.*`-ыг base64 болгож буцаана. Байхгүй бол None.
+
+    ⚠️ Бүх гадаргуу цайвар тул нэг л хувилбар хангалттай.
+    """
+    for suffix, mime in _LOGO_TYPES.items():
+        path = ASSETS_DIR / f"logo{suffix}"
+        if path.is_file():
+            encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+            return f"data:{mime};base64,{encoded}"
     return None
 
 
-def brand_logo(height_px: int = 46, *, on_dark: bool = False) -> str:
+def brand_logo(height_px: int = 42) -> str:
     """Лого файл байвал зураг, байхгүй бол үсгэн тэмдэглэгээ.
 
     ⚠️ Үсгэн хувилбар нь ТҮР ОРЛУУЛАГЧ — албан ёсны лого биш.
-       Бодит логог `assets/logo.svg` (эсвэл .png) болгон тавихад
+       Бодит логог `assets/logo.png` (эсвэл .svg) болгон тавихад
        энд автоматаар харагдана.
     """
-    uri = logo_data_uri(on_dark)
+    uri = logo_data_uri()
     if uri:
         return (f"<img src='{uri}' alt='{esc(ORG_NAME)}' "
                 f"style='height:{height_px}px;width:auto;display:block'>")
@@ -990,38 +944,13 @@ def page_quality(view: dict, meta: dict) -> None:
 # Нэвтрэлт
 # ─────────────────────────────────────────────────────────────────────
 
-BRAND_FEATURES = [
-    ("📊", "<b>ABC–XYZ шинжилгээ</b> — 9 хосолсон ангиллаар нөөцөө эрэмбэлнэ"),
-    ("⚠️", "<b>Эрсдэлийн эрт сэрэмжлүүлэг</b> — нөөц дуусах, хэт их, хөдөлгөөнгүй"),
-    ("🔁", "<b>Шилжүүлэг ба татан авалт</b> — компани доторхоо эхэлж ашиглана"),
-    ("🤖", "<b>AI шийдвэрийн зөвлөмж</b> — дүрэмд суурилсан, эх өгөгдлөөс"),
-]
-
-
-def render_brand_pane() -> None:
-    """Нэвтрэх дэлгэцийн зүүн талын брэндийн самбар."""
-    features = "".join(
-        f"<div class='ii-feat'><span class='ico'>{icon}</span>"
-        f"<span class='txt'>{text}</span></div>"
-        for icon, text in BRAND_FEATURES
-    )
-    # ⚠️ f-string ДОТОР ижил хашилт бичихгүй — Python 3.12+ дээр л ажиллана,
-    #    байршуулалт 3.11 дээр явдаг (`nixpacks.toml`). Тусад нь бодно.
-    logo_class = "logo has-img" if logo_data_uri(True) else "logo"
-    st.markdown(
-        f"<div class='ii-brandpane'>"
-        f"<div>"
-        f"<div class='{logo_class}'>"
-        f"{brand_logo(44, on_dark=True)}</div>"
-        f"<h1>Нөөцийн ухаалаг<br>шийдвэр дэмжих систем</h1>"
-        f"<p class='lede'>Борлуулалт, худалдан авалт, үлдэгдлийн өгөгдлийг "
-        f"нэгтгэн шинжилж, аль бараанд юу хийхийг тодорхой хэлнэ.</p>"
-        f"{features}"
-        f"</div>"
-        f"<div class='ii-brandfoot'>{esc(ORG_NAME)} · Inventory Intelligence &amp; "
-        f"Decision Support System</div>"
-        f"</div>",
-        unsafe_allow_html=True,
+def auth_card_head(title: str, subtitle: str) -> str:
+    """Нэвтрэх картын толгой — лого + гарчиг."""
+    return (
+        f"<div class='ii-authcard'>"
+        f"<div class='logo'>{brand_logo(42)}</div>"
+        f"<h2>{esc(title)}</h2>"
+        f"<p class='sub'>{esc(subtitle)}</p></div>"
     )
 
 
@@ -1029,19 +958,15 @@ def render_setup_screen() -> None:
     """`DSS_USERS` тохируулаагүй үед. ⚠️ Анхны нууц үг ӨГӨХГҮЙ —
     апп хаалттай хэвээр үлдэж, зөвхөн тохируулах зааврыг харуулна."""
     st.markdown("<div class='ii-auth ii-auth-page'>", unsafe_allow_html=True)
-    left, right = st.columns([1.1, 1], gap="large")
+    _, mid, _ = st.columns([1, 1.25, 1])
 
-    with left:
-        render_brand_pane()
-
-    with right:
+    with mid:
         st.markdown(
-            "<div class='ii-formpane'>"
-            "<div class='eyebrow'>Анхны тохиргоо</div>"
-            "<h2>🔒 Нэвтрэлт тохируулаагүй</h2>"
-            f"<p class='sub'>Систем <b>{esc(USERS_ENV)}</b> орчны хувьсагчаас "
-            "хэрэглэгчээ уншдаг. Тохируулах хүртэл хэн ч нэвтрэхгүй — "
-            "<b>анхдагч нууц үг гэж байхгүй</b>.</p></div>",
+            auth_card_head(
+                "🔒 Нэвтрэлт тохируулаагүй",
+                f"Систем {USERS_ENV} орчны хувьсагчаас хэрэглэгчээ уншдаг. "
+                "Тохируулах хүртэл хэн ч нэвтрэхгүй — анхдагч нууц үг байхгүй.",
+            ),
             unsafe_allow_html=True,
         )
 
@@ -1061,14 +986,6 @@ def render_setup_screen() -> None:
                     [(username, password, role, name)]
                 )
 
-        st.markdown(
-            "<div class='ii-formpane'><p class='note'>"
-            + " · ".join(f"<b>{esc(d.label_mn)}</b> — {esc(d.description_mn)}"
-                         for d in ROLES.values())
-            + "</p></div>",
-            unsafe_allow_html=True,
-        )
-
     st.markdown("</div>", unsafe_allow_html=True)
 
     generated = st.session_state.get("setup_json")
@@ -1081,40 +998,30 @@ def render_setup_screen() -> None:
             unsafe_allow_html=True,
         )
         st.code(generated, language="json")
-        st.caption("Олон хэрэглэгч бол JSON массивын дотор мөрүүдээ нэгтгэнэ.")
 
 
 def render_login_screen(attempts: Attempts) -> None:
+    """⭐ ЗӨВХӨН нэвтрэх нэр ба нууц үг."""
     st.markdown("<div class='ii-auth ii-auth-page'>", unsafe_allow_html=True)
-    left, right = st.columns([1.1, 1], gap="large")
+    _, mid, _ = st.columns([1, 1.1, 1])
 
-    with left:
-        render_brand_pane()
-
-    with right:
+    with mid:
         st.markdown(
-            "<div class='ii-formpane'>"
-            "<div class='eyebrow'>Хэрэглэгчийн эрх</div>"
-            "<h2>Нэвтрэх</h2>"
-            "<p class='sub'>Энэ систем нь борлуулалт, нөөц, худалдан авах "
-            "үнийн дотоод мэдээлэл агуулдаг. Эрх олгогдсон хэрэглэгч "
-            "л нэвтэрнэ.</p></div>",
+            auth_card_head("Нэвтрэх", "Эрх олгогдсон хэрэглэгч нэвтэрнэ."),
             unsafe_allow_html=True,
         )
 
         with st.form("login"):
-            username = st.text_input("Нэвтрэх нэр", placeholder="нэрээ бичнэ үү")
-            password = st.text_input("Нууц үг", type="password",
-                                     placeholder="••••••••")
+            username = st.text_input("Нэвтрэх нэр")
+            password = st.text_input("Нууц үг", type="password")
             submitted = st.form_submit_button("Нэвтрэх", type="primary",
                                               use_container_width=True)
 
         st.markdown(
-            "<div class='ii-formpane'><p class='note'>"
-            "🔐 Нууц үг задлагдахгүй хэлбэрээр (PBKDF2-HMAC-SHA256) "
-            "хадгалагдана.<br>"
-            "Нууц үгээ мартсан бол системийн админд хандана уу."
-            "</p></div>",
+            f"<div class='ii-authcard' style='margin-top:0;border:none;"
+            f"box-shadow:none;padding:0'><p class='note'>"
+            f"{esc(ORG_NAME)} · Inventory Intelligence &amp; Decision Support System"
+            f"</p></div>",
             unsafe_allow_html=True,
         )
 
@@ -1200,7 +1107,7 @@ PAGES = [item for _, items in NAV for item in items]
 # Үндсэн урсгал
 # ─────────────────────────────────────────────────────────────────────
 
-_head_logo = logo_data_uri(False)
+_head_logo = logo_data_uri()
 st.markdown(
     "<div class='ii-head'>"
     + (f"<img src='{_head_logo}' alt='{esc(ORG_NAME)}' "
