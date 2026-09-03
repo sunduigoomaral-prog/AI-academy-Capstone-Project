@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "_comment": "Нөөцийн төлөв ба шийдвэрийн дүрмүүд. TypeScript (src/analytics/inventory/) ба Python (python/inventory/) ХОЁУЛАА ЭНЭ ФАЙЛЫГ уншина. Дараалал (priority) болон параметрүүд (params) нь ТОХИРУУЛАГДАНА; нөхцөлийн хэлбэр (condition.type) нь кодод нэрлэгдсэн предикат.",
+  "params": {
+    "daysPerMonth": 30,
+    "_daysPerMonthComment": "Target Months = targetDays / daysPerMonth. Current Stock Days = (qty / avgMonthlySales) × daysPerMonth. Эх өгөгдөлд огнооны багана байхгүй тул хуанлийн бодит өдөр ашиглах боломжгүй.",
+    "stockoutDaysThreshold": 7,
+    "_stockoutComment": "Current Stock Days <= энэ утга бол нөөц дуусах эрсдэлтэй.",
+    "overstockFactor": 1.5,
+    "_overstockComment": "Current Stock Days > targetDays × энэ коэффициент бол хэт их нөөцтэй."
+  },
+  "_statusesComment": "priority өсөх дарааллаар шалгагдана; ЭХНИЙ таарсан дүрэм ялна. Дарааллыг өөрчилвөл ангилал өөрчлөгдөнө.",
+  "statuses": [
+    {
+      "code": "NO_MOVEMENT",
+      "labelMn": "Хөдөлгөөнгүй",
+      "priority": 1,
+      "condition": {
+        "type": "avgSalesIsZero"
+      },
+      "rationaleMn": "Lookback хугацаанд дундаж борлуулалт 0. Нөхөн дүүргэлт биш, борлуулалтыг сэргээх арга хэрэгтэй."
+    },
+    {
+      "code": "STOCKOUT_RISK",
+      "labelMn": "Нөөц дуусах эрсдэлтэй",
+      "priority": 2,
+      "condition": {
+        "type": "stockDaysLteThreshold",
+        "param": "stockoutDaysThreshold"
+      },
+      "rationaleMn": "⚠️ targetDays <= stockoutDaysThreshold байх ангилалд (жишээ нь CZ эмийн сан = 7 хоног) энэ дүрэм ЗОХИСТОЙ-г дарж түрүүлнэ. Эмийн салбарт 7 хоногийн нөөц бодитоор нимгэн тул зориудаар ийм дараалалтай. Хэрэв тохиромжгүй бол stockoutDaysThreshold-ыг бууруулна."
+    },
+    {
+      "code": "OVERSTOCK",
+      "labelMn": "Хэт их нөөцтэй",
+      "priority": 3,
+      "condition": {
+        "type": "stockDaysGtTargetTimesFactor",
+        "param": "overstockFactor"
+      },
+      "rationaleMn": "Зорилтот хоногийн 1.5 дахин давсан. Худалдан авалт зогсоох нэр дэвшигч."
+    },
+    {
+      "code": "SLOW_MOVING",
+      "labelMn": "Удаан эргэлттэй",
+      "priority": 4,
+      "condition": {
+        "type": "xyzIsZAndStockDaysGtTarget"
+      },
+      "rationaleMn": "Эрэлт нь маш хэлбэлзэлтэй (Z) бөгөөд нөөц нь зорилтоос давсан. OVERSTOCK-той давхцвал priority-гоор OVERSTOCK ялна."
+    },
+    {
+      "code": "LOW_STOCK",
+      "labelMn": "Нөөц багассан",
+      "priority": 5,
+      "condition": {
+        "type": "stockDaysLtTargetAndGtThreshold",
+        "param": "stockoutDaysThreshold"
+      },
+      "rationaleMn": "Зорилтоос доогуур боловч шууд дуусах эрсдэлд ороогүй."
+    },
+    {
+      "code": "OPTIMAL",
+      "labelMn": "Зохистой",
+      "priority": 6,
+      "condition": {
+        "type": "stockDaysBetweenTargetAndFactor",
+        "param": "overstockFactor"
+      },
+      "rationaleMn": "targetDays <= stockDays <= targetDays × 1.5"
+    }
+  ],
+  "_decisionsComment": "priority өсөх дарааллаар; ЭХНИЙ таарсан нь ялна.",
+  "decisions": [
+    {
+      "code": "PROMOTION",
+      "labelMn": "Борлуулалт идэвхжүүлэх",
+      "priority": 1,
+      "condition": {
+        "type": "noMovementWithStock"
+      },
+      "rationaleMn": "⚠️ ЭНЭ ДҮРМИЙГ БИЗНЕСТЭЙ ТОХИРУУЛАХ ШААРДЛАГАТАЙ. Шаардлагад PROMOTION гэсэн шийдвэр байсан ч нөхцөл нь заагдаагүй. Одоогийн default: дундаж борлуулалт = 0 атлаа үлдэгдэлтэй — худалдан авалт зогсоох нь хангалтгүй, эрэлтийг сэргээх арга хэрэгтэй."
+    },
+    {
+      "code": "STOP_PURCHASE",
+      "labelMn": "Худалдан авалт зогсоох",
+      "priority": 2,
+      "condition": {
+        "type": "overstockOrSlowMoving"
+      },
+      "rationaleMn": "stockDays > targetDays × 1.5  ЭСВЭЛ  (XYZ = Z БА stockDays > targetDays)"
+    },
+    {
+      "code": "TRANSFER",
+      "labelMn": "Шилжүүлэх",
+      "priority": 3,
+      "condition": {
+        "type": "hasTransferQty"
+      },
+      "rationaleMn": "Өөр байршилд илүүдэл байгаа тул худалдан авахын өмнө шилжүүлнэ."
+    },
+    {
+      "code": "NEW_PURCHASE",
+      "labelMn": "Шинээр худалдан авах",
+      "priority": 4,
+      "condition": {
+        "type": "hasPurchaseQty"
+      },
+      "rationaleMn": "Шилжүүлгээр нөхөгдөөгүй дутагдал үлдсэн."
+    },
+    {
+      "code": "MONITOR",
+      "labelMn": "Хяналтад байлгах",
+      "priority": 5,
+      "condition": {
+        "type": "always"
+      },
+      "rationaleMn": "Ямар ч арга хэмжээ шаардагдахгүй."
+    }
+  ],
+  "_transferPriorityComment": "Шилжүүлгийн эх үүсвэрийг эрэмбэлэх шалгуурууд. available=false гэсэн шалгуур нь эх өгөгдөлд БАЙХГҮЙ учир алгасагдана — хиймэл утга ЗОХИОХГҮЙ.",
+  "transferPriority": [
+    {
+      "criterion": "sameSku",
+      "available": true,
+      "note": "Зөвхөн ижил SKU хооронд шилжүүлнэ (заавал)"
+    },
+    {
+      "criterion": "highestSourceSurplus",
+      "available": true,
+      "note": "Илүүдэл их эх үүсвэр эхэнд"
+    },
+    {
+      "criterion": "highestDestinationShortage",
+      "available": true,
+      "note": "Дутагдал их хүлээн авагч эхэнд"
+    },
+    {
+      "criterion": "locationPriority",
+      "available": false,
+      "note": "MISSING — Location.priority талбар эх Excel-д байхгүй. Утга оруулбал автоматаар идэвхжинэ."
+    },
+    {
+      "criterion": "nearestLocation",
+      "available": false,
+      "note": "MISSING — байршлын зай/координатын өгөгдөл байхгүй."
+    },
+    {
+      "criterion": "locationCode",
+      "available": true,
+      "note": "Эцсийн tie-break — үр дүн давтагдахын тулд"
+    }
+  ],
+  "_transferPreferenceComment": "⭐ ШИЛЖҮҮЛГИЙН ДАВУУ ЭРХИЙН ШАТЛАЛ. Дутагдлыг ЭХНИЙ шатнаас эхлэн нөхнө; тухайн шатанд илүүдэл хүрэлцэхгүй бол л дараагийн шат руу шилжинэ. companyScope: SAME = нэг ХХК дотор · DIFFERENT = өөр ХХК хооронд · ANY = хамаарахгүй. bothWarehouse: зөвхөн агуулах↔агуулах. ⚠️ ОДООГИЙН ӨГӨГДӨЛД ХХК бүр ЯГ НЭГ агуулахтай (200120→300120, 200123→300123, 200127→300127) тул SAME_COMPANY_WAREHOUSE шат бүтцийн хувьд 0 гарна — ирээдүйд нэг ХХК-д хоёр дахь агуулах нэмэгдвэл автоматаар идэвхжинэ. Бодит 'агуулах хооронд' шилжүүлэг нь WAREHOUSE_TO_WAREHOUSE шатанд явагдана.",
+  "transferPreference": {
+    "_comment": "Дутагдлыг ЭХНИЙ шатнаас эхлэн нөхнө. Тухайн шатанд илүүдэл хүрэлцэхгүй бол л дараагийн шат руу шилжинэ.",
+    "tiers": [
+      {
+        "code": "SAME_COMPANY",
+        "labelMn": "Компани доторх сувгууд хооронд",
+        "companyScope": "SAME",
+        "bothWarehouse": false,
+        "enabled": true,
+        "noteMn": "⭐ 1-Р СОНГОЛТ — нэг ХХК-ийн сувгууд (агуулах ↔ эмийн сан, эмийн сан ↔ эмийн сан) хооронд. Нэг хуулийн этгээдийн дотоод хөдөлгөөн тул борлуулалтын гүйлгээ үүсэхгүй."
+      },
+      {
+        "code": "CROSS_COMPANY",
+        "labelMn": "Компани хооронд",
+        "companyScope": "DIFFERENT",
+        "bothWarehouse": false,
+        "enabled": true,
+        "noteMn": "2-Р СОНГОЛТ — өөр ХХК хооронд. ⚠️ Бодит байдалд ХУДАЛДАХ гүйлгээ болно. allowCrossCompany=false гэвэл энэ шат бүхэлдээ алгасагдана."
+      }
+    ]
+  }
+}

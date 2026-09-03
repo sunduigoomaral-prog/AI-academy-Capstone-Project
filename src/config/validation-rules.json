@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "_comment": "Валидацийн дүрмийн каталог. TypeScript (src/services/import/validators.ts) ба Python (python/ingest/validate_excel.py) ХОЁУЛАА ЭНЭ ФАЙЛЫГ уншина — хоёр давхаргын дүн ЯГ ИЖИЛ гарна. severity: ERROR = мөр DB-д ОРОХГҮЙ, WARNING = мөр ОРНО гэхдээ тэмдэглэгдэнэ.",
+  "rowStatusPrecedence": ["ERROR", "WARNING", "VALID"],
+  "rules": [
+    {
+      "code": "MISSING_PRODUCT_CODE",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK", "PRODUCT"],
+      "field": "productCode",
+      "messageMn": "Бүтээгдэхүүний код хоосон байна",
+      "rationaleMn": "product_code нь бүх шинжилгээний business key — үүнгүй мөр ашиглах боломжгүй"
+    },
+    {
+      "code": "MISSING_PRODUCT_NAME",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK", "PRODUCT"],
+      "field": "productName",
+      "messageMn": "Бүтээгдэхүүний нэр хоосон байна",
+      "rationaleMn": "Нэр нь тайлбарын шинжтэй; код байвал тооцоолол хийгдэнэ"
+    },
+    {
+      "code": "MISSING_DATE",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "period",
+      "messageMn": "Он эсвэл Сар хоосон байна",
+      "rationaleMn": "Эх өгөгдөлд огнооны багана байхгүй — Он+Сар нь цорын ганц хугацааны хэмжигдэхүүн"
+    },
+    {
+      "code": "INVALID_DATE",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "period",
+      "messageMn": "Он/Сар буруу утгатай (сар 1-12, он 2000-2100 байх ёстой)",
+      "rationaleMn": "Буруу хугацаа нь lookback цонхыг эвдэнэ"
+    },
+    {
+      "code": "MISSING_QUANTITY",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE"],
+      "field": "quantity",
+      "messageMn": "Тоо хэмжээ хоосон байна",
+      "rationaleMn": "Дундаж эрэлт, нэгж үнэ тооцох боломжгүй болно"
+    },
+    {
+      "code": "MISSING_SALES_AMOUNT",
+      "severity": "ERROR",
+      "appliesTo": ["SALES"],
+      "field": "cogsAmount",
+      "messageMn": "Борлуулалтын дүн (Өртөг) хоосон байна",
+      "rationaleMn": "ABC ангилал нь COGS-value суурьтай тул заавал шаардлагатай"
+    },
+    {
+      "code": "MISSING_PURCHASE_AMOUNT",
+      "severity": "ERROR",
+      "appliesTo": ["PURCHASE"],
+      "field": "amountExVat",
+      "messageMn": "Худалдан авалтын дүн (ТА НӨАТгүй дүн) хоосон байна",
+      "rationaleMn": "Худалдан авалтын нэгж үнэ тооцох боломжгүй"
+    },
+    {
+      "code": "MISSING_STOCK_QUANTITY",
+      "severity": "ERROR",
+      "appliesTo": ["STOCK"],
+      "field": "quantityOnHand",
+      "messageMn": "Үлдэгдлийн тоо хэмжээ хоосон байна",
+      "rationaleMn": "Нөөцийн балансын тооцоонд заавал шаардлагатай"
+    },
+    {
+      "code": "NEGATIVE_QUANTITY",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE"],
+      "field": "quantity",
+      "messageMn": "Тоо хэмжээ сөрөг — буцаалт гэж тэмдэглэв",
+      "rationaleMn": "Буцаалт бол хууль ёсны гүйлгээ. Устгахгүй, is_return=true болгож хадгална"
+    },
+    {
+      "code": "NEGATIVE_STOCK",
+      "severity": "ERROR",
+      "appliesTo": ["STOCK"],
+      "field": "quantityOnHand",
+      "messageMn": "Үлдэгдэл сөрөг байна",
+      "rationaleMn": "Физик үлдэгдэл сөрөг байх боломжгүй — эх системийн алдаа"
+    },
+    {
+      "code": "ZERO_QUANTITY",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE"],
+      "field": "quantity",
+      "messageMn": "Тоо хэмжээ тэг байна",
+      "rationaleMn": "Нэгж үнэ тодорхойлогдохгүй (0-д хуваах). Мөр хадгалагдана, unit_price=NULL"
+    },
+    {
+      "code": "ZERO_QTY_NONZERO_AMOUNT",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE"],
+      "field": "quantity",
+      "messageMn": "Тоо хэмжээ тэг атлаа мөнгөн дүн тэг биш",
+      "rationaleMn": "Ихэвчлэн үнийн залруулга. Дүн нь нийлбэрт орно, нэгж үнэ гарахгүй"
+    },
+    {
+      "code": "DUPLICATE_TRANSACTION",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE"],
+      "field": "row",
+      "messageMn": "Бүх талбараараа ижил мөр давтагдсан",
+      "rationaleMn": "Ижил хэмжээтэй тусдаа нэхэмжлэх байж БОЛНО. Устгахгүй — occurrence_index-ээр ялгаж, давхар insert-ээс dedupe_key хамгаална"
+    },
+    {
+      "code": "DUPLICATE_STOCK_ROW",
+      "severity": "ERROR",
+      "appliesTo": ["STOCK"],
+      "field": "row",
+      "messageMn": "Нэг бүтээгдэхүүн, нэг байршил, нэг сард давхар үлдэгдлийн мөр",
+      "rationaleMn": "Үлдэгдэл бол snapshot — (бараа, байршил, сар) давтагдвал аль нь зөв нь тодорхойгүй"
+    },
+    {
+      "code": "UNMATCHED_PRODUCT",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "productCode",
+      "messageMn": "Бүтээгдэхүүний код лавлахаас олдсонгүй",
+      "rationaleMn": "Product master sheet байвал түүнтэй, эс бөгөөс файлын бүх sheet-ээс гаргасан лавлах болон DB-тэй тулгана"
+    },
+    {
+      "code": "UNMATCHED_LOCATION",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "locationCode",
+      "messageMn": "Байршлын код лавлахаас олдсонгүй",
+      "rationaleMn": "Байршилгүй мөрийг нөөцийн балансад хуваарилах боломжгүй"
+    },
+    {
+      "code": "UNMATCHED_CHANNEL",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "channelCode",
+      "messageMn": "Сувгийн код лавлахаас олдсонгүй",
+      "rationaleMn": "Эх өгөгдөлд сувгийн хэмжээст байхгүй бол энэ шалгалт алгасагдана (skipped)"
+    },
+    {
+      "code": "MISSING_LOCATION_CODE",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "locationCode",
+      "messageMn": "Байршлын код (Суваг) хоосон байна",
+      "rationaleMn": "Байршил бол нөөцийн шинжилгээний заавал шаардлагатай хэмжээст"
+    },
+    {
+      "code": "MISSING_COMPANY_CODE",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "companyCode",
+      "messageMn": "Компанийн код (ХХК) хоосон байна",
+      "rationaleMn": "Байршлаас компанийг тодорхойлж болно — мөр хадгалагдана"
+    },
+    {
+      "code": "UNKNOWN_LOCATION_TYPE",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK", "LOCATION"],
+      "field": "locationType",
+      "messageMn": "Байршлын төрөл танигдсангүй (ЭХНТ / ЭС байх ёстой)",
+      "rationaleMn": "InventoryPolicy нь WAREHOUSE/PHARMACY-гээр зорилтот хоногийг сонгодог"
+    },
+    {
+      "code": "LOCATION_TYPE_CONFLICT",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "locationType",
+      "messageMn": "Төрөл багана нь байршлын кодын дүрэмтэй зөрчилдөж байна (3xxxxx=агуулах, 4xxxxx=эмийн сан)",
+      "rationaleMn": "Чимээгүй засвал буруу зорилтот хоног хэрэглэгдэнэ"
+    },
+    {
+      "code": "COMPANY_LOCATION_CONFLICT",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "companyCode",
+      "messageMn": "Нэг байршил өөр өөр компанид харьяалагдаж байна",
+      "rationaleMn": "ХХК → Суваг харьцаа эх өгөгдөлд хатуу 1:N"
+    },
+    {
+      "code": "UNKNOWN_EXCLUSIVITY",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK", "PRODUCT"],
+      "field": "exclusivity",
+      "messageMn": "Ангилал танигдсангүй (Ex / Non-ex байх ёстой)",
+      "rationaleMn": "Ангилал нь тооцоололд шууд ордоггүй — мөр хадгалагдана"
+    },
+    {
+      "code": "PRODUCT_ATTRIBUTE_CONFLICT",
+      "severity": "WARNING",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "productName",
+      "messageMn": "Нэг код өөр өөр нэр/үйлдвэрлэгчтэй байна",
+      "rationaleMn": "Лавлахад хамгийн олон давтагдсан утгыг авна, зөрчлийг тэмдэглэнэ"
+    },
+    {
+      "code": "NON_NUMERIC_VALUE",
+      "severity": "ERROR",
+      "appliesTo": ["SALES", "PURCHASE", "STOCK"],
+      "field": "numeric",
+      "messageMn": "Тоон талбарт тоо болгох боломжгүй утга байна",
+      "rationaleMn": "Текст утгыг таамгаар 0 болгохгүй"
+    }
+  ]
+}

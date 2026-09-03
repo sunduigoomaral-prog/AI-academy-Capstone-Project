@@ -1,0 +1,1046 @@
+// Inventory Intelligence & Decision Support System
+// Prisma schema — v1 (Phase 1)
+//
+// Энэ schema нь `Data AI.xlsx`-ийн БОДИТ бүтэц дээр суурилсан.
+// Excel-д байхгүй талбарууд nullable бөгөөд `MISSING IN SOURCE` тэмдэглэгээтэй.
+// Дэлгэрэнгүйг docs/01-excel-inspection.md, docs/02-data-mapping.md-ээс үзнэ үү.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+/// Excel `Төрөл`: ЭХНТ → WAREHOUSE, ЭС → PHARMACY
+enum LocationType {
+  WAREHOUSE
+  PHARMACY
+}
+
+/// Excel `Ангилал`: Ex → EX, Non-ex → NON_EX
+enum Exclusivity {
+  EX
+  NON_EX
+}
+
+enum AbcClass {
+  A
+  B
+  C
+}
+
+enum XyzClass {
+  X
+  Y
+  Z
+}
+
+/// ABC-г ямар МӨНГӨН үзүүлэлтээр ангилах.
+/// ⚠️ QUANTITY сонголт ЗОРИУДААР БАЙХГҮЙ — ABC нь тоо хэмжээгээр хийгддэггүй.
+enum AbcBasis {
+  COGS_VALUE
+  REVENUE
+}
+
+/// ABC × XYZ = 9 хосолсон ангилал. Нөөцийн бүх тооцооллын ҮНДСЭН ангилал.
+enum AbcXyzClass {
+  AX
+  AY
+  AZ
+  BX
+  BY
+  BZ
+  CX
+  CY
+  CZ
+}
+
+/// SKU түвшний хөдөлгөөний тэмдэг (AbcXyzResult дээр).
+/// NO_MOVEMENT = "Хөдөлгөөнгүй" (lookback хугацаанд дундаж борлуулалт = 0)
+enum InventoryStatus {
+  ACTIVE
+  NO_MOVEMENT
+}
+
+/// Бүтээгдэхүүн × байршил түвшний нөөцийн төлөв (AnalysisResult дээр).
+/// ⚠️ InventoryStatus-аас ӨӨР grain — тэр нь SKU түвшний.
+/// Дүрмүүд src/config/inventory-status-rules.json-д.
+enum StockStatus {
+  NO_MOVEMENT   // Хөдөлгөөнгүй
+  STOCKOUT_RISK // Нөөц дуусах эрсдэлтэй
+  OVERSTOCK     // Хэт их нөөцтэй
+  SLOW_MOVING   // Удаан эргэлттэй
+  LOW_STOCK     // Нөөц багассан
+  OPTIMAL       // Зохистой
+}
+
+/// Байрлал бүрийн санал болгож буй арга хэмжээ
+enum DecisionType {
+  TRANSFER
+  NEW_PURCHASE
+  STOP_PURCHASE
+  MONITOR
+  PROMOTION
+}
+
+/// ABC-XYZ тооцоонд ямар байршлын борлуулалтыг оруулах вэ
+enum SalesScope {
+  ALL
+  WAREHOUSE
+  PHARMACY
+}
+
+enum RecommendationType {
+  PURCHASE
+  TRANSFER
+  STOCK_REDUCTION
+  DEAD_STOCK
+  STOCKOUT_RISK
+  PURCHASE_PRICE_ALERT
+  MARGIN_RISK
+  GENERAL
+}
+
+enum RecommendationSource {
+  RULE_ENGINE
+  LLM
+  HYBRID
+}
+
+/// Үнэ харьцуулах хэмжээст.
+/// ⚠️ Шаардлагад CHANNEL гэж заасан ч эх өгөгдөлд суваг байхгүй; бодит үнийн
+///    зөрүү НИЙЛҮҮЛЭГЧ-ээр үүсдэг (нийлүүлэгчээр median 19.25%, байршлаар 0.00%).
+enum PriceDimension {
+  SUPPLIER
+  LOCATION
+  CHANNEL
+}
+
+/// AI зөвлөмжийн яаралтай байдал
+enum AiPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+/// Менежерийн шийдвэр (§13)
+enum ReviewAction {
+  ACCEPTED
+  REJECTED
+  MODIFIED
+}
+
+enum RecommendationStatus {
+  DRAFT
+  OPEN
+  ACCEPTED
+  REJECTED
+  APPLIED
+  EXPIRED
+}
+
+enum Severity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ImportStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+/// Upload хийсэн файлын боловсруулалтын шат — UI-ийн progress indicator үүнийг харуулна
+enum ProcessingStage {
+  UPLOADING
+  VALIDATING
+  CLEANING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+/// Sheet detection-ий үр дүн. UNKNOWN = танигдаагүй, боловсруулагдахгүй.
+enum DatasetType {
+  SALES
+  PURCHASE
+  STOCK
+  PRODUCT
+  LOCATION
+  CHANNEL
+  UNKNOWN
+}
+
+/// Мөр бүрийн чанарын төлөв. ERROR мөр DB-д ОРОХГҮЙ.
+enum RowStatus {
+  VALID
+  WARNING
+  ERROR
+}
+
+/// Валидацийн асуудлын хүнд байдал (src/config/validation-rules.json-той тохирно)
+enum ValidationSeverity {
+  WARNING
+  ERROR
+}
+
+enum AnalysisRunStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum ConfigValueType {
+  NUMBER
+  STRING
+  BOOLEAN
+  JSON
+}
+
+// ─────────────────────────────────────────────────────────────
+// MASTER DATA (dimensions)
+// ─────────────────────────────────────────────────────────────
+
+/// Excel `ХХК` — 3 утга: 200120, 200123, 200127
+model Company {
+  id        String   @id @default(cuid())
+  /// Excel `ХХК`. String — код тул арифметик хийхгүй.
+  code      String   @unique
+  /// MISSING IN SOURCE — Excel-д зөвхөн код байна.
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  locations     Location[]
+  salesFacts    SalesFact[]
+  purchaseFacts PurchaseFact[]
+  stockSnaps    StockSnapshot[]
+
+  @@map("company")
+}
+
+/// Борлуулалтын суваг. ⚠️ ЭНЭ ФАЙЛД BIЕ ДААСАН CHANNEL ӨГӨГДӨЛ БАЙХГҮЙ.
+/// Excel-ийн `Суваг` нь бодит утгаараа байршлын код тул Location руу mapping хийсэн.
+/// Хүснэгт нь ирээдүйд бодит channel өгөгдөл ирэхэд бэлэн байхаар үлдээв — Phase 1-д хоосон.
+model Channel {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  locations Location[]
+
+  @@map("channel")
+}
+
+/// Excel `Суваг` + `Төрөл`. 10 байршил: 3 агуулах (3xxxxx) + 7 эмийн сан (4xxxxx)
+model Location {
+  id        String       @id @default(cuid())
+  /// Excel `Суваг` (жишээ: "300123", "400178")
+  code      String       @unique
+  /// MISSING IN SOURCE — Excel-д зөвхөн код байна.
+  name      String?
+  /// Excel `Төрөл`-өөс гарна
+  type      LocationType
+  companyId String
+  /// Phase 1-д NULL — эх өгөгдөлд channel хэмжээст байхгүй
+  channelId String?
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  company Company  @relation(fields: [companyId], references: [id])
+  channel Channel? @relation(fields: [channelId], references: [id])
+
+  salesFacts     SalesFact[]
+  purchaseFacts  PurchaseFact[]
+  stockSnaps     StockSnapshot[]
+  analysisResult AnalysisResult[]
+  fromTransfers  TransferRecommendation[] @relation("TransferFrom")
+  toTransfers    TransferRecommendation[] @relation("TransferTo")
+
+  @@index([companyId])
+  @@index([type])
+  @@map("location")
+}
+
+/// Excel `ТА харилцагч` — 14 нийлүүлэгч, зөвхөн Purchase sheet-д
+model Supplier {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  /// MISSING IN SOURCE
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchaseFacts PurchaseFact[]
+
+  @@map("supplier")
+}
+
+/// Product master. Excel-д тусдаа sheet БАЙХГҮЙ — 3 sheet-ийн union-оос derive хийнэ.
+/// Атрибутын зөрчил 0 гэдэг нь батлагдсан (236 distinct код).
+model Product {
+  id               String      @id @default(cuid())
+  /// ⚠️ BUSINESS KEY. Excel `Дотоод код`. String — тэргүүлэх 0 хадгалах ёстой ("0100139").
+  productCode      String      @unique
+  /// Excel `Бүтээгдэхүүний нэрс`. Эх мөрөнд хоосон байвал null — нэр ЗОХИОХГҮЙ
+  /// (MISSING_PRODUCT_NAME = WARNING, мөр хадгалагдана).
+  name             String?
+  /// Excel `Үйлдвэрлэгч ` (.strip() хийсэн). Байхгүй бол null.
+  manufacturerName String?
+  /// Excel `Ангилал`. Танигдаагүй бол null — таамгаар утга оноохгүй.
+  exclusivity      Exclusivity?
+  /// MISSING IN SOURCE — эмийн ATC/ангилал, savlagaa, хугацаа зэрэг байхгүй
+  atcCode          String?
+  packSize         String?
+  isActive         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  salesFacts     SalesFact[]
+  purchaseFacts  PurchaseFact[]
+  stockSnaps     StockSnapshot[]
+  abcXyzResults  AbcXyzResult[]
+  analysisResult AnalysisResult[]
+  transferRecs   TransferRecommendation[]
+  purchaseRecs    PurchaseRecommendation[]
+  priceBenchmarks PurchasePriceBenchmark[]
+  aiRecs          AIRecommendation[]
+
+  @@index([manufacturerName])
+  @@index([exclusivity])
+  @@map("product")
+}
+
+// ─────────────────────────────────────────────────────────────
+// FACT DATA
+// ─────────────────────────────────────────────────────────────
+// Огнооны багана эх өгөгдөлд БАЙХГҮЙ — зөвхөн `Он` + `Сар`.
+// Тиймээс бүх fact сарын мөчлөгтэй: year + month + periodKey ("YYYY-MM").
+
+/// Excel `Sales` sheet. Гүйлгээний мөрийн түвшин (transaction id байхгүй тул surrogate id).
+model SalesFact {
+  id         String @id @default(cuid())
+  productId  String
+  locationId String
+  companyId  String
+
+  year      Int
+  month     Int
+  /// "YYYY-MM" — indexed lookback query-д
+  periodKey String
+
+  /// Excel `Тоо`. Сөрөг утга = буцаалт.
+  quantity      Decimal  @db.Decimal(18, 4)
+  /// Excel `Өртөг`. ⚠️ ЭНЭ НЬ ӨРТӨГ (COGS), БОРЛУУЛАЛТЫН ОРЛОГО БИШ.
+  /// Батлагдсан: нэгж утга нь худалдан авалтын нэгж үнэтэй median харьцаа 1.00.
+  cogsAmount    Decimal  @db.Decimal(20, 6)
+  /// MISSING IN SOURCE — эх Excel-д зарах үнэ/орлогын багана байхгүй.
+  /// Ирээдүйд орлогын өгөгдөл нэмэгдвэл gross margin энэ талбараас тооцогдоно.
+  netSalesAmount Decimal? @db.Decimal(20, 6)
+  isReturn      Boolean  @default(false)
+  /// Валидацийн үр дүн. ERROR мөр энд ХЭЗЭЭ Ч байхгүй (insert хийгддэггүй).
+  rowStatus     RowStatus @default(VALID)
+
+  /// ⚠️ ДАВХАР INSERT-ЭЭС ХАМГААЛАХ ТҮЛХҮҮР.
+  /// sha256(dataset | бараа | байршил | компани | сар | тоо | дүн | occurrenceIndex).
+  /// Нэг файлыг дахин upload хийвэл ижил түлхүүр гарч upsert давхардуулахгүй;
+  /// ижил хэмжээтэй ҮНЭХЭЭР тусдаа гүйлгээнүүд өөр occurrenceIndex авч хадгалагдана.
+  dedupeKey       String @unique
+  /// Файл доторх ижил бизнес-мөрийн дугаарлалт (0, 1, 2 …)
+  occurrenceIndex Int    @default(0)
+
+  /// Traceability: Excel мөрийн дугаар ба ачаалалтын багц
+  sourceRowNo   Int?
+  importBatchId String?
+
+  createdAt DateTime @default(now())
+
+  product     Product      @relation(fields: [productId], references: [id])
+  location    Location     @relation(fields: [locationId], references: [id])
+  company     Company      @relation(fields: [companyId], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  @@index([productId, periodKey])
+  @@index([locationId, periodKey])
+  @@index([periodKey])
+  @@index([productId, locationId, periodKey])
+  @@index([importBatchId])
+  @@map("sales_fact")
+}
+
+/// Excel `Purchase` sheet. Зөвхөн ЭХНТ (агуулах) байршилд өгөгдөл байна.
+model PurchaseFact {
+  id         String  @id @default(cuid())
+  productId  String
+  locationId String
+  companyId  String
+  supplierId String?
+
+  year      Int
+  month     Int
+  periodKey String
+
+  /// Excel `Тоо`. Сөрөг = буцаалт.
+  quantity     Decimal  @db.Decimal(18, 4)
+  /// Excel `ТА НӨАТгүй дүн` — НӨАТ-гүй худалдан авалтын дүн
+  amountExVat  Decimal  @db.Decimal(20, 6)
+  /// Derived: amountExVat / quantity. quantity = 0 үед NULL (эх өгөгдөлд 2 ийм мөр).
+  unitPrice    Decimal? @db.Decimal(20, 6)
+  isReturn     Boolean  @default(false)
+  rowStatus    RowStatus @default(VALID)
+
+  /// ⚠️ Давхар insert-ээс хамгаалах түлхүүр (SalesFact-тай ижил зарчим,
+  /// нийлүүлэгчийн код нэмэлтээр оролцоно)
+  dedupeKey       String @unique
+  occurrenceIndex Int    @default(0)
+
+  sourceRowNo   Int?
+  importBatchId String?
+
+  createdAt DateTime @default(now())
+
+  product     Product      @relation(fields: [productId], references: [id])
+  location    Location     @relation(fields: [locationId], references: [id])
+  company     Company      @relation(fields: [companyId], references: [id])
+  supplier    Supplier?    @relation(fields: [supplierId], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  @@index([productId, periodKey])
+  @@index([locationId, periodKey])
+  @@index([supplierId, periodKey])
+  @@index([periodKey])
+  @@index([importBatchId])
+  @@map("purchase_fact")
+}
+
+/// Excel `Stock` sheet. Сар бүрийн snapshot.
+/// Эх файлд зөвхөн 2026-06 байгаа бөгөөд (product, location, period) дээр давхардалгүй.
+model StockSnapshot {
+  id         String @id @default(cuid())
+  productId  String
+  locationId String
+  companyId  String
+
+  year      Int
+  month     Int
+  periodKey String
+
+  /// Excel `Үлдэглэл` — CURRENT STOCK QUANTITY
+  quantityOnHand Decimal  @db.Decimal(18, 4)
+  /// Excel `Өртөг` — үлдэгдлийн НИЙТ өртөг (нэгж бус)
+  stockValue     Decimal  @db.Decimal(20, 6)
+  /// Derived: stockValue / quantityOnHand
+  unitCost       Decimal? @db.Decimal(20, 6)
+  rowStatus      RowStatus @default(VALID)
+
+  /// Snapshot тул (бараа, байршил, сар) аль хэдийн unique.
+  /// dedupeKey нь дахин upload хийхэд ижил мөрийг таних нэмэлт баталгаа.
+  dedupeKey String @unique
+
+  sourceRowNo   Int?
+  importBatchId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product     Product      @relation(fields: [productId], references: [id])
+  location    Location     @relation(fields: [locationId], references: [id])
+  company     Company      @relation(fields: [companyId], references: [id])
+  importBatch ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  @@unique([productId, locationId, year, month])
+  @@index([periodKey])
+  @@index([locationId, periodKey])
+  @@index([importBatchId])
+  @@map("stock_snapshot")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONFIGURATION LAYER (hardcode хийхгүй)
+// ─────────────────────────────────────────────────────────────
+
+/// Key-value тохиргоо. ABC/XYZ threshold, lookback, calculation month энд байна.
+/// Кодод hardcode хийхгүй — src/config/analysis-defaults.ts зөвхөн seed утга.
+model AnalysisConfig {
+  id          String          @id @default(cuid())
+  /// Жишээ: "abc.a_threshold", "xyz.x_threshold", "analysis.lookback_months",
+  ///        "analysis.calculation_month", "abc.basis"
+  key         String
+  value       String
+  valueType   ConfigValueType @default(NUMBER)
+  /// Тайлбар — UI дээр харагдана
+  description String?
+  /// Хувилбарын түүх: идэвхтэй мөр нэг л байна
+  version     Int             @default(1)
+  isActive    Boolean         @default(true)
+  effectiveFrom DateTime      @default(now())
+  updatedBy   String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([key, version])
+  @@index([key, isActive])
+  @@map("analysis_config")
+}
+
+/// Warehouse / Pharmacy × ABC × XYZ → target days матриц.
+/// 2 x 3 x 3 = 18 мөр. Excel-ээс биш, бизнесийн бодлогоос ирнэ.
+model InventoryPolicy {
+  id           String       @id @default(cuid())
+  locationType LocationType
+  abcClass     AbcClass
+  xyzClass     XyzClass
+  /// Зорилтот нөөцийн хоног
+  targetDays   Int
+  /// Заавал биш — нөөцийн доод/дээд хязгаарын коэффициент
+  minDaysFactor Decimal?    @db.Decimal(6, 3)
+  maxDaysFactor Decimal?    @db.Decimal(6, 3)
+  /// Тухайн байршилд тусгайлан override хийх бол
+  locationId   String?
+  version      Int          @default(1)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([locationType, abcClass, xyzClass, locationId, version])
+  @@index([isActive])
+  @@map("inventory_policy")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ANALYSIS OUTPUT
+// ─────────────────────────────────────────────────────────────
+
+/// Нэг удаагийн тооцооллын гүйлт. Calculation month + lookback + config snapshot.
+model AnalysisRun {
+  id               String            @id @default(cuid())
+  /// "YYYY-MM" — тооцооллын сар. Энэ сар ӨӨРӨӨ дунджид ОРОХГҮЙ.
+  calculationMonth String
+  /// Ашигласан бүтэн сарууд, calculationMonth-аас өмнөх N сар
+  lookbackMonths   Int
+  /// Бодитоор ашигласан period key-үүд, жишээ: ["2025-12", ..., "2026-05"]
+  periodsUsed      String[]
+  /// Гүйлтийн үед хүчинтэй байсан config-ийн бүрэн snapshot (reproducibility)
+  configSnapshot   Json
+  abcBasis         AbcBasis          @default(COGS_VALUE)
+  salesScope       SalesScope        @default(ALL)
+  /// Тухайн гүйлтэд ашигласан threshold-ууд (reproducibility)
+  abcAThreshold    Decimal           @default(0.70) @db.Decimal(6, 4)
+  abcBThreshold    Decimal           @default(0.90) @db.Decimal(6, 4)
+  xyzXThreshold    Decimal           @default(0.25) @db.Decimal(6, 4)
+  xyzYThreshold    Decimal           @default(0.50) @db.Decimal(6, 4)
+  /// Тооцоололд орсон SKU-гийн тоо
+  skuCount         Int               @default(0)
+  status           AnalysisRunStatus @default(PENDING)
+  errorMessage     String?
+  startedAt        DateTime          @default(now())
+  finishedAt       DateTime?
+  triggeredBy      String?
+
+  abcXyzResults   AbcXyzResult[]
+  priceBenchmarks PurchasePriceBenchmark[]
+  results      AnalysisResult[]
+  transferRecs TransferRecommendation[]
+  purchaseRecs PurchaseRecommendation[]
+  aiRecs       AIRecommendation[]
+
+  @@index([calculationMonth])
+  @@index([status])
+  @@map("analysis_run")
+}
+
+/// ⭐ PHASE 3 ГАРАЛТ — SKU түвшний ABC-XYZ ангилал.
+///
+/// Grain: (analysisRun, product). Байршлаас ХАМААРАХГҮЙ — ангилал нь SKU-д
+/// оногддог. Байршлын зорилтот хоног нь `InventoryPolicy(locationType, abc, xyz)`
+/// -ээр Phase 4-д хэрэглэгдэнэ.
+model AbcXyzResult {
+  id        String @id @default(cuid())
+  runId     String
+  productId String
+
+  /// Excel `Дотоод код` — тайлан/экспортод шууд ашиглахад давхардуулсан
+  productCode String
+  productName String?
+
+  // ── ABC (МӨНГӨН дүнгээр) ──
+  /// Lookback хугацааны нийт борлуулалтын дүн (abcBasis-ийн дагуу)
+  salesValue      Decimal  @db.Decimal(20, 6)
+  /// salesValue / нийт salesValue
+  salesShare      Decimal  @db.Decimal(12, 10)
+  /// Эрэмбийн дагуух хуримтлагдсан хувь (энэ SKU-г ОРУУЛААД)
+  cumulativeShare Decimal  @db.Decimal(12, 10)
+  /// Мөнгөн дүнгээр буурах эрэмбэ (1-ээс эхэлнэ)
+  rank            Int
+  abcClass        AbcClass
+
+  // ── XYZ (ТОО ХЭМЖЭЭГЭЭР) ──
+  /// Lookback сар бүрийн тоо хэмжээ, сарын дарааллаар. Борлуулалтгүй сар = 0.
+  /// AnalysisRun.periodsUsed-тэй ижил урттай, ижил дараалалтай.
+  monthlyQty        Decimal[] @db.Decimal(18, 4)
+  averageMonthlyQty Decimal   @db.Decimal(18, 6)
+  /// Population standard deviation (STDEV.P)
+  stdDev            Decimal   @db.Decimal(18, 6)
+  /// stdDev / |average|. Дундаж = 0 үед NULL (хөдөлгөөнгүй).
+  cv                Decimal?  @db.Decimal(14, 8)
+  xyzClass          XyzClass
+  /// Борлуулалт бүхий сарын тоо
+  monthsWithSales   Int
+
+  // ── ҮНДСЭН АНГИЛАЛ ──
+  /// ⭐ Дараагийн бүх нөөцийн тооцооллын суурь болох 9 хосолсон ангилал
+  abcXyz          AbcXyzClass
+  inventoryStatus InventoryStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+
+  run     AnalysisRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  product Product     @relation(fields: [productId], references: [id])
+
+  @@unique([runId, productId])
+  @@index([runId, abcXyz])
+  @@index([runId, rank])
+  @@index([runId, inventoryStatus])
+  @@map("abc_xyz_result")
+}
+
+/// ⭐ PHASE 4 ГАРАЛТ — бүтээгдэхүүн × байршил түвшний нөөцийн шийдвэр (§17).
+///
+/// Grain: (analysisRun, product, location).
+/// ABC/XYZ нь SKU түвшний `AbcXyzResult`-аас хуулбарлагдана; targetDays нь
+/// `InventoryPolicy(locationType, abc, xyz)`-оос ирнэ.
+model AnalysisResult {
+  id         String @id @default(cuid())
+  runId      String
+  productId  String
+  locationId String
+
+  /// Тайлан/экспортод шууд ашиглахад давхардуулсан
+  productCode String
+  productName String?
+  /// ⚠️ Эх өгөгдөлд сувгийн хэмжээст БАЙХГҮЙ — ихэвчлэн NULL (docs/01 §5)
+  channelCode String?
+
+  // ── Ангилал (AbcXyzResult-аас) ──
+  abcClass AbcClass
+  xyzClass XyzClass
+  abcXyz   AbcXyzClass
+
+  // ── Баланс (§3–§9) ──
+  /// Тухайн БАЙРШЛЫН lookback дундаж сарын борлуулалт
+  averageMonthlySales Decimal  @db.Decimal(18, 6)
+  /// InventoryPolicy-оос ирсэн зорилтот хоног
+  targetDays          Int
+  /// targetDays / daysPerMonth
+  targetMonths        Decimal  @db.Decimal(10, 6)
+  /// averageMonthlySales × targetMonths
+  recommendedStock    Decimal  @db.Decimal(18, 4)
+  currentStock        Decimal  @db.Decimal(18, 4)
+  currentStockValue   Decimal  @db.Decimal(20, 6)
+  /// (currentStock / averageMonthlySales) × daysPerMonth.
+  /// ⚠️ averageMonthlySales = 0 үед тодорхойлолтоор 0 (§7), хязгааргүй БИШ.
+  currentStockDays    Decimal  @db.Decimal(14, 4)
+  /// MAX(recommended − current, 0)
+  shortage            Decimal  @db.Decimal(18, 4)
+  /// MAX(current − recommended, 0)
+  excess              Decimal  @db.Decimal(18, 4)
+  shortageValue       Decimal? @db.Decimal(20, 6)
+  excessValue         Decimal? @db.Decimal(20, 6)
+
+  // ── Төлөв ба шийдвэр ──
+  stockStatus StockStatus
+  /// Бусад байршлаас хүлээн авах (БҮХЭЛ тоо, §10)
+  transferInQty  Int @default(0)
+  /// Бусад байршил руу өгөх (БҮХЭЛ тоо)
+  transferOutQty Int @default(0)
+  /// CEILING(recommended − current − transferIn), <= 0 бол 0 (§13)
+  newPurchaseQty Int @default(0)
+  decision       DecisionType
+  /// Шийдвэрийн үндэслэл — дүрмийн тайлбар
+  decisionReason String?
+
+  createdAt DateTime @default(now())
+
+  run      AnalysisRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  product  Product     @relation(fields: [productId], references: [id])
+  location Location    @relation(fields: [locationId], references: [id])
+
+  @@unique([runId, productId, locationId])
+  @@index([runId, abcXyz])
+  @@index([runId, stockStatus])
+  @@index([runId, decision])
+  @@index([runId, locationId])
+  @@map("analysis_result")
+}
+
+/// Байршил хооронд шилжүүлэх санал (илүүдэлтэй → дутагдалтай)
+model TransferRecommendation {
+  id             String   @id @default(cuid())
+  runId          String
+  productId      String
+  fromLocationId String
+  toLocationId   String
+
+  /// ⚠️ БҮХЭЛ тоо (§10). Эх үүсвэрийн илүүдлээс хэтрэхгүй (§12).
+  suggestedQty   Int
+  estimatedValue Decimal? @db.Decimal(20, 6)
+  reasonCode     String
+  reason         String?
+  /// ⭐ Давуу эрхийн шат: SAME_COMPANY_WAREHOUSE | WAREHOUSE_TO_WAREHOUSE |
+  /// SAME_COMPANY_ANY | CROSS_COMPANY_ANY
+  tierCode       String?
+  tierLabel      String?
+  /// §15-ын эрэмбийн дагуух дугаар (1-ээс). Бага нь эрт хийгдэнэ.
+  priorityRank   Int      @default(0)
+  priority       Severity @default(MEDIUM)
+  createdAt      DateTime @default(now())
+
+  run          AnalysisRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  product      Product     @relation(fields: [productId], references: [id])
+  fromLocation Location    @relation("TransferFrom", fields: [fromLocationId], references: [id])
+  toLocation   Location    @relation("TransferTo", fields: [toLocationId], references: [id])
+
+  @@index([runId, priority])
+  @@map("transfer_recommendation")
+}
+
+/// Худалдан авалтын санал (шилжүүлгээр нөхөж чадахгүй дутагдал)
+model PurchaseRecommendation {
+  id        String @id @default(cuid())
+  runId     String
+  productId String
+  /// Нөөцийг хүлээн авах агуулах
+  locationId String
+
+  /// ⚠️ БҮХЭЛ тоо (§10) — CEILING хийгдсэн
+  suggestedQty       Int
+  /// Хамгийн сүүлийн худалдан авалтын жигнэсэн нэгж үнэ (байвал)
+  referenceUnitPrice Decimal? @db.Decimal(20, 6)
+  estimatedCost     Decimal? @db.Decimal(20, 6)
+  reasonCode        String
+  reason            String?
+  priority          Severity @default(MEDIUM)
+  createdAt         DateTime @default(now())
+
+  run     AnalysisRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  product Product     @relation(fields: [productId], references: [id])
+
+  @@index([runId, priority])
+  @@map("purchase_recommendation")
+}
+
+/// ⭐ PHASE 5 — SKU түвшний худалдан авалтын үнийн benchmark (§1–§6, §8).
+///
+/// Grain: (analysisRun, product).
+/// ⚠️ Эх өгөгдөлд ӨДРИЙН огноо байхгүй тул "сүүлийн худалдан авалт" = сүүлийн САР,
+///    тухайн сарын ЖИГНЭСЭН дундаж үнэ.
+model PurchasePriceBenchmark {
+  id        String @id @default(cuid())
+  runId     String
+  productId String
+
+  productCode String
+  productName String?
+  dimension   PriceDimension @default(SUPPLIER)
+
+  /// Benchmark-д орсон эх сурвалжийн тоо (тэг үнэтэй нь ХАСАГДСАН)
+  sourceCount Int @default(0)
+
+  minUnitPrice Decimal? @db.Decimal(20, 6)
+  maxUnitPrice Decimal? @db.Decimal(20, 6)
+  minSourceKey String?
+  maxSourceKey String?
+  /// §5 max − min
+  priceGap     Decimal? @db.Decimal(20, 6)
+  /// §5 (max − min) / min × 100
+  priceGapPct  Decimal? @db.Decimal(14, 6)
+  gapSeverity  String?
+
+  /// Шинжилгээний цонхны НИЙТ худалдан авалт (мэдээллийн зорилгоор)
+  totalQuantity        Decimal  @db.Decimal(18, 4)
+  totalCost            Decimal  @db.Decimal(20, 6)
+  weightedAvgUnitPrice Decimal? @db.Decimal(20, 6)
+
+  /// §6 — ОДООГИЙН худалдан авалт = эх сурвалж бүрийн СҮҮЛИЙН
+  /// худалдан авалтын нийлбэр. ⚠️ minUnitPrice-тай ИЖИЛ хугацааны суурьтай.
+  currentQuantity      Decimal  @default(0) @db.Decimal(18, 4)
+  currentCost          Decimal  @default(0) @db.Decimal(20, 6)
+  /// §6 currentCost − currentQuantity × minUnitPrice. Үргэлж >= 0.
+  potentialSaving      Decimal? @db.Decimal(20, 6)
+
+  /// §8 — нэгж өртгийн өөрчлөлт (цонхны эхний ↔ сүүлийн сар)
+  firstPeriod           String?
+  lastPeriod            String?
+  firstUnitPrice        Decimal? @db.Decimal(20, 6)
+  lastUnitPrice         Decimal? @db.Decimal(20, 6)
+  priceChangePct        Decimal? @db.Decimal(14, 6)
+  priceIncreaseSeverity String?
+
+  /// §8 MARGIN RISK flag. ⚠️ Ашгийн МӨНГӨН дүн биш — эрсдэлийн дохио.
+  marginAtRisk      Boolean @default(false)
+  marginRiskReasons Json?
+
+  /// Benchmark хийх боломжгүй бол шалтгаан (тэг үнэ / зөвхөн буцаалт)
+  excludedReason String?
+
+  createdAt DateTime @default(now())
+
+  run     AnalysisRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  product Product              @relation(fields: [productId], references: [id])
+  points  PurchasePricePoint[]
+
+  @@unique([runId, productId])
+  @@index([runId, gapSeverity])
+  @@index([runId, marginAtRisk])
+  @@map("purchase_price_benchmark")
+}
+
+/// §2 — эх сурвалж тус бүрийн сүүлийн худалдан авалтын үнэ + §3/§4 эрэмбэ
+model PurchasePricePoint {
+  id          String @id @default(cuid())
+  benchmarkId String
+
+  /// Нийлүүлэгчийн код (default), эсвэл байршил/сувгийн код
+  dimensionKey String
+  /// ⚠️ Өдөр биш, САР ("YYYY-MM")
+  lastPurchasePeriod String
+  quantity  Decimal @db.Decimal(18, 4)
+  amount    Decimal @db.Decimal(20, 6)
+  unitPrice Decimal @db.Decimal(20, 6)
+  /// §3 — 1 = хамгийн хямд
+  lowestRank  Int
+  /// §4 — 1 = хамгийн үнэтэй
+  highestRank Int
+
+  benchmark PurchasePriceBenchmark @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+
+  @@unique([benchmarkId, dimensionKey])
+  @@index([benchmarkId, lowestRank])
+  @@map("purchase_price_point")
+}
+
+/// ⭐ PHASE 5 — AI зөвлөмж (§9 JSON бүтэц).
+///
+/// ⚠️ §10: AI нь calculation engine-ийн үр дүнг ӨӨРЧЛӨХГҮЙ.
+///    `recommendedQuantity` нь Phase 4-ийн бодсон шилжүүлэг/худалдан авалтын
+///    тоо — энд дахин тооцоологдоогүй. `evidence` нь ЗӨВХӨН бодит тоо агуулна.
+model AIRecommendation {
+  id    String  @id @default(cuid())
+  runId String?
+
+  type   RecommendationType
+  source RecommendationSource @default(RULE_ENGINE)
+  status RecommendationStatus @default(OPEN)
+
+  productId    String?
+  locationId   String?
+  productCode  String?
+  locationCode String?
+
+  // ── §9 гаралтын талбарууд ──
+  /// Эрсдэлийн ангилал (жишээ: "НӨӨЦ ДУУСАХ")
+  risk     String
+  priority AiPriority @default(MEDIUM)
+  /// WHY — яагаад
+  reason   String
+  /// IMPACT — бизнест үзүүлэх нөлөө
+  impact   String
+  /// ACTION — санал болгож буй арга хэмжээ
+  recommendedAction String
+
+  transferPossible Boolean @default(false)
+  purchaseRequired Boolean @default(false)
+  stopPurchase     Boolean @default(false)
+  /// ⚠️ Phase 4-ийн бодсон тоо. AI дахин тооцоолоогүй.
+  recommendedQuantity Int @default(0)
+
+  /// Аль дүрэм асав
+  ruleCode    String?
+  /// Rule engine-ийн хувилбар — үр дүнг давтан гаргах боломж
+  ruleVersion String?
+
+  /// ⚠️ ЗӨВХӨН бодит тооцоологдсон тоо. Зохиосон утга байхгүй.
+  evidence Json?
+
+  /// LLM ашигласан үед л бөглөгдөнө (Phase 6+)
+  llmModel     String?
+  llmPromptRef String?
+  llmTokensIn  Int?
+  llmTokensOut Int?
+
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+  reviewedBy String?
+
+  run     AnalysisRun? @relation(fields: [runId], references: [id], onDelete: Cascade)
+  product Product?     @relation(fields: [productId], references: [id])
+  reviews RecommendationReview[]
+
+  @@index([runId, priority])
+  @@index([runId, risk])
+  @@index([status, priority])
+  @@map("ai_recommendation")
+}
+
+/// §13 — менежерийн Accept / Reject / Modify түүх.
+/// AuditLog-д мөн бичигдэнэ (user, date, sku, recommendation, action, old→new).
+model RecommendationReview {
+  id               String @id @default(cuid())
+  recommendationId String
+
+  action ReviewAction
+  /// Хэн шийдвэрлэсэн
+  reviewedBy String
+  /// MODIFY үед: өмнөх ба шинэ тоо
+  oldQuantity Int?
+  newQuantity Int?
+  /// Тайлбар / үндэслэл
+  note String?
+
+  createdAt DateTime @default(now())
+
+  recommendation AIRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@index([recommendationId])
+  @@index([reviewedBy])
+  @@map("recommendation_review")
+}
+
+// ─────────────────────────────────────────────────────────────
+// OPERATIONS / AUDIT
+// ─────────────────────────────────────────────────────────────
+
+/// Upload хийсэн ЭХ ФАЙЛ. Файл өөрөө диск дээр ӨӨРЧЛӨГДӨӨГҮЙ хадгалагдана
+/// (`storagePath`), нормчилсон өгөгдлөөс тусдаа.
+model SourceFile {
+  id           String          @id @default(cuid())
+  /// Хэрэглэгчийн upload хийсэн жинхэнэ файлын нэр
+  originalName String
+  /// Диск дээрх зам — эх файлыг ХЭЗЭЭ Ч дарж бичихгүй
+  storagePath  String
+  sizeBytes    Int
+  mimeType     String?
+  extension    String
+  /// SHA-256 — ижил файлыг дахин upload хийснийг таних
+  fileHash     String
+  sheetCount   Int             @default(0)
+  totalRows    Int             @default(0)
+  stage        ProcessingStage @default(UPLOADING)
+  /// 0–100, UI-ийн progress indicator
+  progressPct  Int             @default(0)
+  /// Одоогийн алхмын тайлбар (жишээ: "Sales: 8,400/14,300 мөр")
+  stageMessage String?
+  errorMessage String?
+  rowsValid    Int             @default(0)
+  rowsWarning  Int             @default(0)
+  rowsError    Int             @default(0)
+  rowsInserted Int             @default(0)
+  uploadedBy   String?
+  uploadedAt   DateTime        @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+
+  batches ImportBatch[]
+
+  @@index([fileHash])
+  @@index([stage])
+  @@map("source_file")
+}
+
+/// Файл доторх НЭГ SHEET-ийн ачаалалт — traceability
+model ImportBatch {
+  id           String       @id @default(cuid())
+  sourceFileId String
+  fileName     String
+  fileHash     String?
+  sheetName    String
+  sheetIndex   Int          @default(0)
+  /// Sheet detection-ий үр дүн (нэрээр бус баганын бүтцээр тодорхойлогдсон)
+  datasetType  DatasetType  @default(UNKNOWN)
+  /// 0–1, таних итгэлцүүр
+  confidence   Decimal      @default(0) @db.Decimal(5, 4)
+  /// role → эх баганын бодит нэр (Excel дээрхээр)
+  columnMap    Json?
+  /// Аль ч role-д буугаагүй баганууд
+  unmappedColumns Json?
+  status       ImportStatus @default(PENDING)
+  rowsRead     Int          @default(0)
+  rowsValid    Int          @default(0)
+  rowsWarning  Int          @default(0)
+  rowsError    Int          @default(0)
+  rowsLoaded   Int          @default(0)
+  rowsSkipped  Int          @default(0)
+  issues       Json?
+  startedAt    DateTime     @default(now())
+  finishedAt   DateTime?
+  importedBy   String?
+
+  sourceFile       SourceFile        @relation(fields: [sourceFileId], references: [id], onDelete: Cascade)
+  salesFacts       SalesFact[]
+  purchaseFacts    PurchaseFact[]
+  stockSnaps       StockSnapshot[]
+  validationIssues ValidationIssue[]
+
+  @@index([sourceFileId])
+  @@index([status])
+  @@map("import_batch")
+}
+
+/// Валидацийн нэг асуудал = Data Quality Dashboard-ийн хүснэгтийн нэг мөр
+model ValidationIssue {
+  id            String             @id @default(cuid())
+  importBatchId String
+  /// src/config/validation-rules.json дахь дүрмийн код
+  code          String
+  severity      ValidationSeverity
+  sheetName     String
+  /// Excel дэх БОДИТ мөрийн дугаар (header = 1)
+  rowNo         Int
+  /// Эх баганын бодит нэр
+  columnName    String?
+  /// Асуудалтай утга (хэсэгчлэн таслагдсан)
+  value         String?
+  message       String
+  createdAt     DateTime           @default(now())
+
+  importBatch ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+
+  @@index([importBatchId, severity])
+  @@index([importBatchId, code])
+  @@map("validation_issue")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  /// Жишээ: "CONFIG_UPDATE", "ANALYSIS_RUN", "IMPORT", "RECOMMENDATION_REVIEW"
+  action     String
+  entityType String
+  entityId   String?
+  actor      String?
+  before     Json?
+  after      Json?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}

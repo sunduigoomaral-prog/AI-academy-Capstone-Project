@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "_comment": "Тооцооллын SEED утгууд. TypeScript (src/config/analysis-defaults.ts) ба Python (python/analysis/config.py) ХОЁУЛАА ЭНЭ ФАЙЛЫГ уншина. ЭДГЭЭР НЬ HARDCODED KPI БИШ — DB-ийн analysis_config / inventory_policy хүснэгтийг анх дүүргэхэд болон DB унтарсан үеийн fallback-д ашиглагдана. Ажиллах үед тооцоолол ҮРГЭЛЖ DB-ээс уншина.",
+  "analysisConfig": [
+    {
+      "key": "abc.a_threshold",
+      "value": "0.70",
+      "valueType": "NUMBER",
+      "description": "ABC: хуримтлагдсан эзлэх хувь <= 0.70 бол A ангилал"
+    },
+    {
+      "key": "abc.b_threshold",
+      "value": "0.90",
+      "valueType": "NUMBER",
+      "description": "ABC: хуримтлагдсан эзлэх хувь <= 0.90 бол B, түүнээс дээш нь C"
+    },
+    {
+      "key": "abc.basis",
+      "value": "COGS_VALUE",
+      "valueType": "STRING",
+      "description": "ABC-г ямар МӨНГӨН үзүүлэлтээр ангилах: COGS_VALUE | REVENUE. Эх Excel-д борлуулалтын орлого байхгүй тул default нь COGS_VALUE. QUANTITY сонголт ЗӨВШӨӨРӨГДӨХГҮЙ — ABC нь тоо хэмжээгээр хийгддэггүй."
+    },
+    {
+      "key": "xyz.x_threshold",
+      "value": "0.25",
+      "valueType": "NUMBER",
+      "description": "XYZ: хэлбэлзлийн коэффициент (CV) <= 0.25 бол X ангилал"
+    },
+    {
+      "key": "xyz.y_threshold",
+      "value": "0.50",
+      "valueType": "NUMBER",
+      "description": "XYZ: CV <= 0.50 бол Y, түүнээс дээш нь Z"
+    },
+    {
+      "key": "analysis.lookback_months",
+      "value": "6",
+      "valueType": "NUMBER",
+      "description": "Дундаж борлуулалт тооцоход ашиглах БҮТЭН сарын тоо. Calculation month өөрөө үүнд ОРОХГҮЙ."
+    },
+    {
+      "key": "analysis.calculation_month",
+      "value": "2026-06",
+      "valueType": "STRING",
+      "description": "Системийн global тооцооллын сар (YYYY-MM). Энэ сарын борлуулалт дундажид ОРОХГҮЙ; хамгийн сүүлд ашиглах сар нь үүнээс өмнөх сар байна."
+    },
+    {
+      "key": "analysis.sales_scope",
+      "value": "ALL",
+      "valueType": "STRING",
+      "description": "ABC-XYZ тооцоонд ямар байршлын борлуулалтыг оруулах вэ: ALL | WAREHOUSE | PHARMACY. ⚠️ Эх өгөгдөлд агуулахын борлуулалт дотор эмийн сан руу хийсэн дотоод шилжүүлэг орсон эсэхийг ялгах багана БАЙХГҮЙ (харилцагчийн багана байхгүй). ALL сонговол давхар тоологдох эрсдэлтэй — docs/03 §7-ийн нээлттэй асуулт №2."
+    },
+    {
+      "key": "analysis.days_per_month",
+      "value": "30",
+      "valueType": "NUMBER",
+      "description": "Сарын дундаж борлуулалтыг өдрийн дундаж болгох хуваарь. Эх өгөгдөлд огнооны багана байхгүй тул хуанлийн бодит өдөр ашиглах боломжгүй."
+    },
+    {
+      "key": "price_control.alert_delta_pct",
+      "value": "0.10",
+      "valueType": "NUMBER",
+      "description": "Худалдан авалтын нэгж үнэ baseline-аас энэ хувиар өсвөл сэрэмжлүүлэг"
+    },
+    {
+      "key": "price_control.baseline_months",
+      "value": "3",
+      "valueType": "NUMBER",
+      "description": "Үнийн baseline тооцоход ашиглах өмнөх сарын тоо"
+    },
+    {
+      "key": "risk.dead_stock_months_without_sales",
+      "value": "6",
+      "valueType": "NUMBER",
+      "description": "Үлдэгдэлтэй атлаа энэ хугацаанд борлуулалтгүй бол dead stock"
+    },
+    {
+      "key": "risk.excess_days_factor",
+      "value": "1.5",
+      "valueType": "NUMBER",
+      "description": "daysOfSupply > targetDays × энэ коэффициент бол илүүдэл нөөц"
+    },
+    {
+      "key": "risk.shortage_days_factor",
+      "value": "0.5",
+      "valueType": "NUMBER",
+      "description": "daysOfSupply < targetDays × энэ коэффициент бол дутагдалтай нөөц"
+    }
+  ],
+  "_inventoryPolicyComment": "Зорилтот хоног = (байршлын төрөл × ABC × XYZ). WAREHOUSE мөр нь 'Эм ханган нийлүүлэх төв БОЛОН БУСАД' баганыг төлөөлнө — өөрөөр хэлбэл PHARMACY биш аливаа байршлын төрөл WAREHOUSE-ийн утгыг өвлөнө (resolveTargetDays / resolve_target_days доторх fallback). Hardcode БАЙХГҮЙ — DB-ийн inventory_policy хүснэгтээс уншина.",
+  "inventoryPolicy": [
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "A",
+      "xyzClass": "X",
+      "targetDays": 45
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "A",
+      "xyzClass": "Y",
+      "targetDays": 40
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "A",
+      "xyzClass": "Z",
+      "targetDays": 30
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "B",
+      "xyzClass": "X",
+      "targetDays": 40
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "B",
+      "xyzClass": "Y",
+      "targetDays": 35
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "B",
+      "xyzClass": "Z",
+      "targetDays": 25
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "C",
+      "xyzClass": "X",
+      "targetDays": 30
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "C",
+      "xyzClass": "Y",
+      "targetDays": 25
+    },
+    {
+      "locationType": "WAREHOUSE",
+      "abcClass": "C",
+      "xyzClass": "Z",
+      "targetDays": 15
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "A",
+      "xyzClass": "X",
+      "targetDays": 30
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "A",
+      "xyzClass": "Y",
+      "targetDays": 25
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "A",
+      "xyzClass": "Z",
+      "targetDays": 15
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "B",
+      "xyzClass": "X",
+      "targetDays": 25
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "B",
+      "xyzClass": "Y",
+      "targetDays": 20
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "B",
+      "xyzClass": "Z",
+      "targetDays": 10
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "C",
+      "xyzClass": "X",
+      "targetDays": 15
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "C",
+      "xyzClass": "Y",
+      "targetDays": 10
+    },
+    {
+      "locationType": "PHARMACY",
+      "abcClass": "C",
+      "xyzClass": "Z",
+      "targetDays": 7
+    }
+  ]
+}

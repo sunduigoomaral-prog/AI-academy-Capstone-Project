@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "_comment": "Худалдан авалтын үнийн хяналт + AI шийдвэрийн дүрэм. TypeScript (src/analytics/pricing/, src/analytics/recommendation/) ба Python (python/pricing/) ХОЁУЛАА ЭНЭ ФАЙЛЫГ уншина.",
+
+  "_priceDimensionComment": "⚠️ ШААРДЛАГАД 'channel' гэж заасан ч эх өгөгдөлд сувгийн хэмжээст БАЙХГҮЙ (docs/01 §5). Бодит өгөгдөл дээр шалгасан: НИЙЛҮҮЛЭГЧ-ээр median үнийн зөрүү 19.25% (27 SKU), БАЙРШЛААР median 0.00% — ижил бараа агуулахуудад ижил үнэтэй. Тиймээс үнэ харьцуулах утга учиртай хэмжээст нь SUPPLIER. Сувгийн өгөгдөл ирвэл CHANNEL болгож солино.",
+  "priceDimension": "SUPPLIER",
+  "priceDimensionOptions": ["SUPPLIER", "LOCATION", "CHANNEL"],
+
+  "params": {
+    "topN": 3,
+    "_topNComment": "§3, §4 — хамгийн бага / өндөр үнэтэй TOP 3",
+
+    "minValidUnitPrice": 0.000001,
+    "_minValidUnitPriceComment": "⚠️ ЗААВАЛ ХЭРЭГТЭЙ ХАМГААЛАЛТ. Эх өгөгдөлд тэг дүнтэй худалдан авалтын мөр байдаг (Phase 1 §8). Тэг нэгж үнийг benchmark-д оруулбал priceGapPct = (max−0)/0 → хязгааргүй болж 23,272,726,566% гэх мэт утгагүй тоо гарна. Энэ утгаас доош нэгж үнийг benchmark-аас ХАСНА.",
+
+    "excludeReturns": true,
+    "_excludeReturnsComment": "Сөрөг тоо хэмжээтэй (буцаалт) мөрийг нэгж үнийн benchmark-д оруулахгүй — тэдгээр нь худалдан авалтын үнэ биш.",
+
+    "salesTrendSplitMonths": 3,
+    "_salesTrendComment": "Lookback-ийн сүүлийн N сарыг өмнөх N сартай харьцуулна (6 сар → 3 vs 3)",
+    "salesTrendGrowingPct": 10,
+    "salesTrendDecliningPct": -10
+  },
+
+  "_gapSeverityComment": "Үнийн зөрүүний хувиар эрсдэлийн зэрэг. priceGapPct >= threshold бол тухайн зэрэг. Өндөрөөс нам руу шалгагдана.",
+  "gapSeverity": [
+    { "code": "CRITICAL", "minGapPct": 40, "labelMn": "Маш өндөр зөрүү" },
+    { "code": "HIGH", "minGapPct": 20, "labelMn": "Өндөр зөрүү" },
+    { "code": "MEDIUM", "minGapPct": 10, "labelMn": "Дунд зөрүү" },
+    { "code": "LOW", "minGapPct": 3, "labelMn": "Бага зөрүү" }
+  ],
+
+  "_priceTrendComment": "Нэгж үнийн өсөлт — lookback дэх ЭХНИЙ ба СҮҮЛИЙН худалдан авалтын сарыг харьцуулна.",
+  "priceIncreaseSeverity": [
+    { "code": "CRITICAL", "minIncreasePct": 30, "labelMn": "Маш их өссөн" },
+    { "code": "HIGH", "minIncreasePct": 15, "labelMn": "Их өссөн" },
+    { "code": "MEDIUM", "minIncreasePct": 5, "labelMn": "Өссөн" }
+  ],
+
+  "_marginRiskComment": "⚠️ §7-ийн GROSS PROFIT нь эх өгөгдөлд БОДИТООР ТООЦОГДОХГҮЙ — борлуулалтын ОРЛОГЫН багана байхгүй (docs/01 §7, sales_fact.net_sales_amount бүгд NULL). Шаардлагын §7 өөрөө 'Хэрэв Sales Amount болон Sales Cost байгаа бол' гэж нөхцөлтэй заасан. Тиймээс grossProfit / grossMarginPct нь NULL буцна. §8-ийн MARGIN RISK-ийг ӨӨРТӨӨ БОЛОМЖТОЙ хоёр дохиогоор орлуулна: (1) нийлүүлэгч хоорондын үнийн зөрүү, (2) нэгж өртгийн өсөлт. Энэ нь ашгийн МӨНГӨН дүн биш, ашиг буурах ЭРСДЭЛИЙН дохио.",
+  "marginRisk": {
+    "requiresGapPct": 20,
+    "requiresPriceIncreasePct": 10,
+    "_comment": "Аль нэг нөхцөл хангагдвал MARGIN_RISK flag тавина."
+  },
+
+  "_aiComment": "AI шийдвэрийн дүрэм. ⚠️ AI нь тооцооллын үр дүнг ӨӨРЧЛӨХГҮЙ (§10) — зөвхөн бэлэн метрикүүд дээр тайлбар (WHY/IMPACT/ACTION) нэмнэ. Тоо зохиохгүй: бүх утга calculation engine-ээс ирнэ. priority өсөх дарааллаар шалгагдаж, эхний таарсан нь ялна.",
+  "aiRules": [
+    {
+      "code": "STOCKOUT_CRITICAL",
+      "priority": 1,
+      "risk": "НӨӨЦ ДУУСАХ",
+      "aiPriority": "CRITICAL",
+      "condition": { "type": "stockoutOnHighValue" },
+      "whyMn": "Нөөц дуусах эрсдэлтэй бөгөөд энэ нь A ангиллын өндөр эргэлттэй бараа.",
+      "impactMn": "Борлуулалт тасалдаж, өндөр эргэлттэй барааны орлого шууд алдагдана.",
+      "actionMn": "Шилжүүлэг боломжтой бол нэн даруй шилжүүлэх, эс бөгөөс яаралтай худалдан авах."
+    },
+    {
+      "code": "STOCKOUT_RISK",
+      "priority": 2,
+      "risk": "НӨӨЦ ДУУСАХ",
+      "aiPriority": "HIGH",
+      "condition": { "type": "stockoutRisk" },
+      "whyMn": "Одоогийн нөөц зорилтот хоногийн доод хязгаараас доогуур байна.",
+      "impactMn": "Ойрын хугацаанд нөөц дуусаж борлуулалт алдагдах магадлалтай.",
+      "actionMn": "Шилжүүлэг эсвэл худалдан авалтаар нөөцийг зорилтот түвшинд хүргэх."
+    },
+    {
+      "code": "DEAD_STOCK",
+      "priority": 3,
+      "risk": "ХӨДӨЛГӨӨНГҮЙ НӨӨЦ",
+      "aiPriority": "HIGH",
+      "condition": { "type": "deadStockWithValue" },
+      "whyMn": "Сүүлийн хугацаанд огт борлуулалтгүй атлаа үлдэгдэлтэй байна.",
+      "impactMn": "Хөрөнгө хөдөлгөөнгүй боогдож, хугацаа дуусах эрсдэл нэмэгдэнэ.",
+      "actionMn": "Худалдан авалт зогсоох; борлуулалт идэвхжүүлэх эсвэл эрэлттэй байршил руу шилжүүлэх."
+    },
+    {
+      "code": "PRICE_GAP_HIGH",
+      "priority": 4,
+      "risk": "ХУДАЛДАН АВАЛТЫН ҮНЭ",
+      "aiPriority": "HIGH",
+      "condition": { "type": "highPriceGap" },
+      "whyMn": "Ижил барааг эх сурвалж бүрээс мэдэгдэхүйц өөр үнээр авч байна.",
+      "impactMn": "Илүү төлөлт нь өртгийг өсгөж, ашгийн маржинг шууд бууруулна.",
+      "actionMn": "Хамгийн бага үнэтэй эх сурвалжийг benchmark болгож, бусадтай дахин хэлэлцээр хийх."
+    },
+    {
+      "code": "PRICE_INCREASE",
+      "priority": 5,
+      "risk": "ӨРТӨГ ӨСӨЛТ",
+      "aiPriority": "MEDIUM",
+      "condition": { "type": "priceIncrease" },
+      "whyMn": "Худалдан авалтын нэгж үнэ сүүлийн саруудад тогтвортой өссөн.",
+      "impactMn": "Зарах үнэ өөрчлөгдөөгүй бол ашгийн маржин буурна.",
+      "actionMn": "Үнийн өсөлтийн шалтгааныг тодруулж, өөр эх сурвалж эсвэл гэрээний нөхцөл шалгах."
+    },
+    {
+      "code": "OVERSTOCK",
+      "priority": 6,
+      "risk": "ИЛҮҮДЭЛ НӨӨЦ",
+      "aiPriority": "MEDIUM",
+      "condition": { "type": "overstock" },
+      "whyMn": "Нөөц зорилтот хоногоос мэдэгдэхүйц давсан байна.",
+      "impactMn": "Эргэлтийн хөрөнгө боогдож, хадгалалтын зардал нэмэгдэнэ.",
+      "actionMn": "Худалдан авалт зогсоох; дутагдалтай байршил руу шилжүүлэх."
+    },
+    {
+      "code": "SLOW_MOVING",
+      "priority": 7,
+      "risk": "УДААН ЭРГЭЛТ",
+      "aiPriority": "MEDIUM",
+      "condition": { "type": "slowMoving" },
+      "whyMn": "Эрэлт нь маш хэлбэлзэлтэй (Z) бөгөөд нөөц зорилтоос давсан.",
+      "impactMn": "Таамаглах боломж багатай эрэлт дээр илүүдэл нөөц барих нь эрсдэлтэй.",
+      "actionMn": "Худалдан авалтыг бууруулах эсвэл эрэлттэй байршил руу шилжүүлэх."
+    },
+    {
+      "code": "SALES_DECLINING",
+      "priority": 8,
+      "risk": "БОРЛУУЛАЛТ БУУРАЛТ",
+      "aiPriority": "LOW",
+      "condition": { "type": "salesDeclining" },
+      "whyMn": "Сүүлийн саруудын борлуулалт өмнөх үетэй харьцуулахад буурсан.",
+      "impactMn": "Одоогийн зорилтот нөөц хэт өндөр болж илүүдэл үүсэх магадлалтай.",
+      "actionMn": "Худалдан авалтыг хянаж, эрэлтийн бууралт үргэлжлэх эсэхийг ажиглах."
+    },
+    {
+      "code": "MONITOR",
+      "priority": 99,
+      "risk": "ЭРСДЭЛГҮЙ",
+      "aiPriority": "LOW",
+      "condition": { "type": "always" },
+      "whyMn": "Нөөц зорилтот түвшинд, үнийн зөрчил илрээгүй.",
+      "impactMn": "Одоогоор бизнест үзүүлэх сөрөг нөлөө байхгүй.",
+      "actionMn": "Тусгай арга хэмжээ шаардлагагүй, хяналтад байлгах."
+    }
+  ],
+
+  "_summaryComment": "§12 — менежерийн хураангуй. Тус бүр TOP N.",
+  "managementSummary": {
+    "topN": 5,
+    "sections": [
+      { "code": "TOP_RISKS", "labelMn": "Хамгийн өндөр эрсдэл", "sortBy": "priorityThenImpact" },
+      { "code": "TOP_PURCHASE", "labelMn": "Худалдан авах", "filterDecision": "NEW_PURCHASE", "sortBy": "shortageValue" },
+      { "code": "TOP_TRANSFER", "labelMn": "Шилжүүлэх", "filterDecision": "TRANSFER", "sortBy": "transferQty" },
+      { "code": "TOP_STOP_PURCHASE", "labelMn": "Худалдан авалт зогсоох", "filterDecision": "STOP_PURCHASE", "sortBy": "excessValue" },
+      { "code": "TOP_PRICE_RISKS", "labelMn": "Үнийн эрсдэл", "sortBy": "potentialSaving" }
+    ]
+  }
+}
