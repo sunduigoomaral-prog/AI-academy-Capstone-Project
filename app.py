@@ -16,7 +16,9 @@ INVENTORY INTELLIGENCE & DECISION SUPPORT SYSTEM — Streamlit UI.
 
 from __future__ import annotations
 
+import base64
 import html
+import os
 import sys
 import tempfile
 import time
@@ -77,6 +79,12 @@ CSS = """
     --ink:       #0f172a;
     --muted:     #64748b;
     --primary:   #4f46e5;
+
+    /* ⚠️ Байгууллагын өнгө — албан ёсны брэнд гарын авлага гартал
+       мэргэжлийн саармаг өнгө ашиглав. Энэ 2 утгыг солиход
+       нэвтрэх дэлгэц бүхэлдээ шинэ өнгөнд шилжинэ. */
+    --brand:     #0f766e;
+    --brand-2:   #134e4a;
   }
 
   .stApp { background: var(--bg); }
@@ -210,6 +218,77 @@ CSS = """
   }
   .ii-login h2 { font-size: 1.25rem; font-weight: 700; color: var(--ink); margin: 0; }
   .ii-login p  { font-size: .82rem; color: var(--muted); margin: .3rem 0 0; }
+
+  /* ── Брэндийн самбар (нэвтрэх дэлгэцийн зүүн тал) ── */
+  .ii-brandpane {
+    background: linear-gradient(150deg, var(--brand) 0%, var(--brand-2) 100%);
+    border-radius: 18px; padding: 2.1rem 2rem 1.6rem;
+    color: #fff; min-height: 460px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: 0 18px 40px -22px rgba(15, 23, 42, .55);
+  }
+  .ii-brandpane .logo { margin-bottom: 1.5rem; }
+  .ii-brandpane .logo img { height: 46px; width: auto; display: block; }
+  .ii-wordmark {
+    font-size: 1.7rem; font-weight: 800; letter-spacing: .22em;
+    line-height: 1; color: #fff;
+  }
+  .ii-wordmark-sub {
+    font-size: .58rem; letter-spacing: .2em; text-transform: uppercase;
+    color: rgba(255, 255, 255, .68); margin-top: .35rem;
+  }
+  .ii-brandpane h1 {
+    font-size: 1.6rem; font-weight: 700; line-height: 1.25;
+    margin: 0 0 .5rem; color: #fff;
+  }
+  .ii-brandpane .lede {
+    font-size: .84rem; line-height: 1.55; color: rgba(255, 255, 255, .8);
+    margin: 0 0 1.4rem; max-width: 34ch;
+  }
+  .ii-feat { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .6rem; }
+  .ii-feat .ico {
+    width: 26px; height: 26px; border-radius: 8px; flex: none;
+    background: rgba(255, 255, 255, .14); display: flex;
+    align-items: center; justify-content: center; font-size: .8rem;
+  }
+  .ii-feat .txt { font-size: .78rem; line-height: 1.4; color: rgba(255, 255, 255, .9); }
+  .ii-feat .txt b { color: #fff; font-weight: 600; }
+  .ii-brandfoot {
+    font-size: .66rem; color: rgba(255, 255, 255, .55);
+    border-top: 1px solid rgba(255, 255, 255, .16);
+    padding-top: .8rem; margin-top: 1.2rem;
+  }
+
+  /* ── Нэвтрэх маягт (баруун тал) ── */
+  .ii-formpane { padding: 1.6rem .4rem 0 1.4rem; }
+  .ii-formpane .eyebrow {
+    font-size: .6rem; font-weight: 700; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--brand); margin-bottom: .4rem;
+  }
+  .ii-formpane h2 { font-size: 1.55rem; font-weight: 700; color: var(--ink); margin: 0; }
+  .ii-formpane p.sub {
+    font-size: .82rem; color: var(--muted); margin: .35rem 0 1.2rem; line-height: 1.5;
+  }
+  .ii-formpane .note {
+    font-size: .7rem; color: var(--muted); line-height: 1.5;
+    border-top: 1px solid var(--border); padding-top: .8rem; margin-top: 1.2rem;
+  }
+
+  /* Нэвтрэх дэлгэц дээр талбарууд том, тод */
+  .ii-auth div[data-testid="stTextInput"] input {
+    height: 2.7rem; font-size: .9rem; border-radius: 10px;
+  }
+  .ii-auth div[data-testid="stTextInput"] label {
+    display: block !important; font-size: .72rem !important;
+    font-weight: 600 !important; color: var(--muted) !important;
+  }
+  .ii-auth div[data-testid="stForm"] { border: none; padding: 0; }
+  .ii-auth button[kind="primaryFormSubmit"], .ii-auth button[kind="primary"] {
+    height: 2.7rem; border-radius: 10px; font-weight: 600;
+    background: var(--brand); border-color: var(--brand);
+  }
+  /* Нэвтрээгүй үед хажуугийн самбар хэрэггүй */
+  .ii-auth-page section[data-testid="stSidebar"] { display: none !important; }
   .ii-user {
     display: flex; align-items: center; gap: .55rem;
     border: 1px solid var(--border); border-radius: 10px;
@@ -276,6 +355,52 @@ def kpi_text(item: dict) -> str:
 def badge(text: str, tone: dict) -> str:
     return (f"<span class='ii-badge' style='background:{tone['bg']};color:{tone['fg']}'>"
             f"{esc(text)}</span>")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Байгууллагын брэнд
+# ─────────────────────────────────────────────────────────────────────
+
+#: Байгууллагын нэр — орчны хувьсагчаар солино (hardcode биш)
+ORG_NAME = os.environ.get("DSS_ORG_NAME", "Монос ХХК")
+
+ASSETS_DIR = PROJECT_ROOT / "assets"
+
+#: Бараан дэвсгэрт эхлээд `logo-light.*`, дараа нь энгийн логог хайна
+_LOGO_STEMS = {"dark": ("logo-light", "logo"), "light": ("logo", "logo-light")}
+_LOGO_TYPES = {
+    ".svg": "image/svg+xml", ".png": "image/png",
+    ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+}
+
+
+@st.cache_data(show_spinner=False)
+def logo_data_uri(on_dark: bool) -> str | None:
+    """`assets/` доторх логог base64 болгож буцаана. Байхгүй бол None."""
+    for stem in _LOGO_STEMS["dark" if on_dark else "light"]:
+        for suffix, mime in _LOGO_TYPES.items():
+            path = ASSETS_DIR / f"{stem}{suffix}"
+            if path.is_file():
+                encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+                return f"data:{mime};base64,{encoded}"
+    return None
+
+
+def brand_logo(height_px: int = 46, *, on_dark: bool = False) -> str:
+    """Лого файл байвал зураг, байхгүй бол үсгэн тэмдэглэгээ.
+
+    ⚠️ Үсгэн хувилбар нь ТҮР ОРЛУУЛАГЧ — албан ёсны лого биш.
+       Бодит логог `assets/logo.svg` (эсвэл .png) болгон тавихад
+       энд автоматаар харагдана.
+    """
+    uri = logo_data_uri(on_dark)
+    if uri:
+        return (f"<img src='{uri}' alt='{esc(ORG_NAME)}' "
+                f"style='height:{height_px}px;width:auto;display:block'>")
+
+    name = esc(ORG_NAME.replace(" ХХК", "").strip() or ORG_NAME)
+    return (f"<div class='ii-wordmark'>{name}</div>"
+            f"<div class='ii-wordmark-sub'>{esc(ORG_NAME)}</div>")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -859,86 +984,144 @@ def page_quality(view: dict, meta: dict) -> None:
 # Нэвтрэлт
 # ─────────────────────────────────────────────────────────────────────
 
+BRAND_FEATURES = [
+    ("📊", "<b>ABC–XYZ шинжилгээ</b> — 9 хосолсон ангиллаар нөөцөө эрэмбэлнэ"),
+    ("⚠️", "<b>Эрсдэлийн эрт сэрэмжлүүлэг</b> — нөөц дуусах, хэт их, хөдөлгөөнгүй"),
+    ("🔁", "<b>Шилжүүлэг ба татан авалт</b> — компани доторхоо эхэлж ашиглана"),
+    ("🤖", "<b>AI шийдвэрийн зөвлөмж</b> — дүрэмд суурилсан, эх өгөгдлөөс"),
+]
+
+
+def render_brand_pane() -> None:
+    """Нэвтрэх дэлгэцийн зүүн талын брэндийн самбар."""
+    features = "".join(
+        f"<div class='ii-feat'><span class='ico'>{icon}</span>"
+        f"<span class='txt'>{text}</span></div>"
+        for icon, text in BRAND_FEATURES
+    )
+    st.markdown(
+        f"<div class='ii-brandpane'>"
+        f"<div>"
+        f"<div class='logo'>{brand_logo(46, on_dark=True)}</div>"
+        f"<h1>Нөөцийн ухаалаг<br>шийдвэр дэмжих систем</h1>"
+        f"<p class='lede'>Борлуулалт, худалдан авалт, үлдэгдлийн өгөгдлийг "
+        f"нэгтгэн шинжилж, аль бараанд юу хийхийг тодорхой хэлнэ.</p>"
+        f"{features}"
+        f"</div>"
+        f"<div class='ii-brandfoot'>{esc(ORG_NAME)} · Inventory Intelligence &amp; "
+        f"Decision Support System</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def render_setup_screen() -> None:
     """`DSS_USERS` тохируулаагүй үед. ⚠️ Анхны нууц үг ӨГӨХГҮЙ —
     апп хаалттай хэвээр үлдэж, зөвхөн тохируулах зааврыг харуулна."""
-    st.markdown(
-        "<div class='ii-login'><h2>🔒 Нэвтрэлт тохируулаагүй байна</h2>"
-        f"<p>Систем <b>{esc(USERS_ENV)}</b> орчны хувьсагчаас хэрэглэгчээ уншдаг. "
-        "Тохируулах хүртэл хэн ч нэвтрэхгүй — анхдагч нууц үг гэж байхгүй.</p></div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='ii-auth ii-auth-page'>", unsafe_allow_html=True)
+    left, right = st.columns([1.1, 1], gap="large")
 
-    st.markdown(
-        "<div class='ii-warn'>⚠️ Доорх хэрэгсэл нь зөвхөн нууц үгийг "
-        "задлагдахгүй хэлбэрт хөрвүүлнэ — нэвтрэх эрх ОЛГОХГҮЙ.</div>",
-        unsafe_allow_html=True,
-    )
+    with left:
+        render_brand_pane()
 
-    st.markdown("<div class='ii-card'><h3>1. Хэрэглэгчийн мөр үүсгэх</h3></div>",
-                unsafe_allow_html=True)
+    with right:
+        st.markdown(
+            "<div class='ii-formpane'>"
+            "<div class='eyebrow'>Анхны тохиргоо</div>"
+            "<h2>🔒 Нэвтрэлт тохируулаагүй</h2>"
+            f"<p class='sub'>Систем <b>{esc(USERS_ENV)}</b> орчны хувьсагчаас "
+            "хэрэглэгчээ уншдаг. Тохируулах хүртэл хэн ч нэвтрэхгүй — "
+            "<b>анхдагч нууц үг гэж байхгүй</b>.</p></div>",
+            unsafe_allow_html=True,
+        )
 
-    cols = st.columns([1.2, 1.2, 1, 1.2])
-    username = cols[0].text_input("Нэвтрэх нэр", key="setup_user")
-    password = cols[1].text_input("Нууц үг", type="password", key="setup_pass")
-    role = cols[2].selectbox("Эрх", list(ROLES),
-                             format_func=lambda r: ROLES[r].label_mn, key="setup_role")
-    name = cols[3].text_input("Бүтэн нэр", key="setup_name")
+        username = st.text_input("Нэвтрэх нэр", key="setup_user")
+        password = st.text_input("Нууц үг", type="password", key="setup_pass")
+        cols = st.columns(2)
+        role = cols[0].selectbox("Эрх", list(ROLES),
+                                 format_func=lambda r: ROLES[r].label_mn,
+                                 key="setup_role")
+        name = cols[1].text_input("Бүтэн нэр", key="setup_name")
 
-    for code, definition in ROLES.items():
-        st.caption(f"**{definition.label_mn}** ({code}) — {definition.description_mn}")
+        if st.button("Хэрэглэгч үүсгэх", type="primary", use_container_width=True):
+            if not username.strip() or not password:
+                st.error("Нэвтрэх нэр ба нууц үгээ бөглөнө үү.")
+            else:
+                st.session_state["setup_json"] = build_users_json(
+                    [(username, password, role, name)]
+                )
 
-    if st.button("Үүсгэх", type="primary"):
-        if not username.strip() or not password:
-            st.error("Нэвтрэх нэр ба нууц үгээ бөглөнө үү.")
-        else:
-            st.session_state["setup_json"] = build_users_json(
-                [(username, password, role, name)]
-            )
+        st.markdown(
+            "<div class='ii-formpane'><p class='note'>"
+            + " · ".join(f"<b>{esc(d.label_mn)}</b> — {esc(d.description_mn)}"
+                         for d in ROLES.values())
+            + "</p></div>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     generated = st.session_state.get("setup_json")
     if generated:
         st.markdown(
-            f"<div class='ii-card'><h3>2. Энэ утгыг <code>{esc(USERS_ENV)}</code> "
+            f"<div class='ii-card'><h3>Энэ утгыг <code>{esc(USERS_ENV)}</code> "
             "орчны хувьсагчид тавь</h3><p class='hint'>Dokploy → Application → "
-            "Environment → Add. Дараа нь Redeploy.</p></div>",
+            "Environment → Add → дараа нь Redeploy. Нууц үг энд ил бичигдээгүй — "
+            "зөвхөн PBKDF2 hash.</p></div>",
             unsafe_allow_html=True,
         )
         st.code(generated, language="json")
-        st.caption(
-            "Олон хэрэглэгч бол JSON массивын дотор мөрүүдээ хамтад нь нэгтгэ. "
-            "Нууц үг энэ утганд ил бичигдээгүй — зөвхөн PBKDF2 hash."
-        )
+        st.caption("Олон хэрэглэгч бол JSON массивын дотор мөрүүдээ нэгтгэнэ.")
 
 
 def render_login_screen(attempts: Attempts) -> None:
-    st.markdown(
-        "<div class='ii-login'><h2>🔐 Нэвтрэх</h2>"
-        "<p>Энэ систем нь дотоод мэдээлэл агуулдаг тул эрхтэй хэрэглэгч "
-        "л нэвтэрнэ.</p></div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("<div class='ii-auth ii-auth-page'>", unsafe_allow_html=True)
+    left, right = st.columns([1.1, 1], gap="large")
 
-    with st.form("login"):
-        username = st.text_input("Нэвтрэх нэр")
-        password = st.text_input("Нууц үг", type="password")
-        submitted = st.form_submit_button("Нэвтрэх", type="primary")
+    with left:
+        render_brand_pane()
 
-    if not submitted:
-        return
+    with right:
+        st.markdown(
+            "<div class='ii-formpane'>"
+            "<div class='eyebrow'>Хэрэглэгчийн эрх</div>"
+            "<h2>Нэвтрэх</h2>"
+            "<p class='sub'>Энэ систем нь борлуулалт, нөөц, худалдан авах "
+            "үнийн дотоод мэдээлэл агуулдаг. Эрх олгогдсон хэрэглэгч "
+            "л нэвтэрнэ.</p></div>",
+            unsafe_allow_html=True,
+        )
 
-    result = authenticate(username, password, attempts=attempts)
-    if result.user is None:
-        st.error(result.error_mn)
-        return
+        with st.form("login"):
+            username = st.text_input("Нэвтрэх нэр", placeholder="нэрээ бичнэ үү")
+            password = st.text_input("Нууц үг", type="password",
+                                     placeholder="••••••••")
+            submitted = st.form_submit_button("Нэвтрэх", type="primary",
+                                              use_container_width=True)
 
-    st.session_state["user"] = {
-        "username": result.user.username,
-        "display_name": result.user.display_name,
-        "role": result.user.role.code,
-    }
-    st.session_state["login_at"] = time.time()
-    st.rerun()
+        st.markdown(
+            "<div class='ii-formpane'><p class='note'>"
+            "🔐 Нууц үг задлагдахгүй хэлбэрээр (PBKDF2-HMAC-SHA256) "
+            "хадгалагдана.<br>"
+            "Нууц үгээ мартсан бол системийн админд хандана уу."
+            "</p></div>",
+            unsafe_allow_html=True,
+        )
+
+        if submitted:
+            result = authenticate(username, password, attempts=attempts)
+            if result.user is None:
+                st.error(result.error_mn)
+            else:
+                st.session_state["user"] = {
+                    "username": result.user.username,
+                    "display_name": result.user.display_name,
+                    "role": result.user.role.code,
+                }
+                st.session_state["login_at"] = time.time()
+                st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def current_user() -> User | None:
@@ -1007,12 +1190,16 @@ PAGES = [item for _, items in NAV for item in items]
 # Үндсэн урсгал
 # ─────────────────────────────────────────────────────────────────────
 
+_head_logo = logo_data_uri(False)
 st.markdown(
     "<div class='ii-head'>"
-    "<span class='ii-logo'>📦</span>"
-    "<span><span class='ii-brand'>INVENTORY</span><br>"
-    "<span class='ii-brand-sub'>Decision Support System</span></span>"
-    "</div>",
+    + (f"<img src='{_head_logo}' alt='{esc(ORG_NAME)}' "
+       "style='height:30px;width:auto'>"
+       if _head_logo else "<span class='ii-logo'>📦</span>")
+    + "<span><span class='ii-brand'>INVENTORY</span><br>"
+      f"<span class='ii-brand-sub'>{esc(ORG_NAME)} · Decision Support System</span>"
+      "</span>"
+      "</div>",
     unsafe_allow_html=True,
 )
 
