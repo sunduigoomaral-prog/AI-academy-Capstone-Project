@@ -80,11 +80,10 @@ CSS = """
     --muted:     #64748b;
     --primary:   #4f46e5;
 
-    /* ⚠️ Байгууллагын өнгө — албан ёсны брэнд гарын авлага гартал
-       мэргэжлийн саармаг өнгө ашиглав. Энэ 2 утгыг солиход
-       нэвтрэх дэлгэц бүхэлдээ шинэ өнгөнд шилжинэ. */
-    --brand:     #0f766e;
-    --brand-2:   #134e4a;
+    /* Монос Группын брэнд өнгө — `assets/logo.png`-ээс пиксел
+       түвшинд гаргаж авсан (ногоон навч + тэнхлэг хөх үсэг). */
+    --brand:     #078b4e;   /* Монос ногоон */
+    --brand-2:   #244455;   /* Монос тэнхлэг хөх */
   }
 
   .stApp { background: var(--bg); }
@@ -228,7 +227,14 @@ CSS = """
     box-shadow: 0 18px 40px -22px rgba(15, 23, 42, .55);
   }
   .ii-brandpane .logo { margin-bottom: 1.5rem; }
-  .ii-brandpane .logo img { height: 46px; width: auto; display: block; }
+  /* ⚠️ Логоны үсэг нь тэнхлэг хөх тул бараан дэвсгэр дээр уншигдахгүй.
+     Албан ёсны тэмдгийг ӨӨРЧЛӨХГҮЙГЭЭР цагаан суурин дээр байрлуулна. */
+  .ii-brandpane .logo.has-img {
+    background: #fff; border-radius: 12px;
+    padding: .6rem .85rem; display: inline-block;
+    box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .35);
+  }
+  .ii-brandpane .logo img { height: 44px; width: auto; display: block; }
   .ii-wordmark {
     font-size: 1.7rem; font-weight: 800; letter-spacing: .22em;
     line-height: 1; color: #fff;
@@ -1002,7 +1008,8 @@ def render_brand_pane() -> None:
     st.markdown(
         f"<div class='ii-brandpane'>"
         f"<div>"
-        f"<div class='logo'>{brand_logo(46, on_dark=True)}</div>"
+        f"<div class='logo{" has-img" if logo_data_uri(True) else ""}'>"
+        f"{brand_logo(44, on_dark=True)}</div>"
         f"<h1>Нөөцийн ухаалаг<br>шийдвэр дэмжих систем</h1>"
         f"<p class='lede'>Борлуулалт, худалдан авалт, үлдэгдлийн өгөгдлийг "
         f"нэгтгэн шинжилж, аль бараанд юу хийхийг тодорхой хэлнэ.</p>"
