@@ -99,9 +99,14 @@ DEFAULT_ROLE = "viewer"
 
 @dataclass(frozen=True)
 class User:
+    #: Нэвтрэх таних тэмдэг — имэйл (хуучин бүртгэлд энгийн нэр байж болно)
     username: str
     display_name: str
     role: Role
+
+    @property
+    def email(self) -> str:
+        return self.username
 
     def may_view(self, page: str) -> bool:
         return self.role.pages is None or page in self.role.pages
@@ -180,10 +185,11 @@ def load_users(env: dict[str, str] | None = None) -> dict[str, dict]:
         if not isinstance(entry, dict):
             raise AuthError(f"{USERS_ENV}[{index}] нь объект байх ёстой")
 
-        username = str(entry.get("username") or "").strip().lower()
+        # `email` илүү тохиромжтой; хуучин бүртгэлийн `username`-ийг ч хүлээнэ
+        username = str(entry.get("email") or entry.get("username") or "").strip().lower()
         password_hash = str(entry.get("password_hash") or "")
         if not username:
-            raise AuthError(f"{USERS_ENV}[{index}] дээр `username` алга")
+            raise AuthError(f"{USERS_ENV}[{index}] дээр `email` алга")
         if not password_hash.startswith(f"{ALGORITHM}$"):
             raise AuthError(
                 f"{USERS_ENV}[{index}] ({username}) дээр `password_hash` буруу — "
@@ -281,7 +287,7 @@ def authenticate(
         attempts.register_failure()
         left = MAX_ATTEMPTS - attempts.count
         suffix = f" ({left} оролдлого үлдлээ)" if attempts.count else ""
-        return LoginResult(None, f"Нэвтрэх нэр эсвэл нууц үг буруу.{suffix}")
+        return LoginResult(None, f"Имэйл эсвэл нууц үг буруу.{suffix}")
 
     attempts.reset()
     return LoginResult(
@@ -293,19 +299,35 @@ def authenticate(
     )
 
 
+def looks_like_email(value: str) -> bool:
+    """Маш энгийн шалгалт — `a@b.c` хэлбэртэй эсэх.
+
+    ⚠️ Нэвтрэх үед ЭНЭ ШАЛГАЛТЫГ ХИЙХГҮЙ (аль хаяг бүртгэлтэйг
+       задруулж болзошгүй). Зөвхөн бүртгэл ҮҮСГЭХ үед ашиглана.
+    """
+    value = (value or "").strip()
+    if value.count("@") != 1 or " " in value:
+        return False
+    local, _, domain = value.partition("@")
+    return bool(local) and "." in domain and not domain.startswith(".") \
+        and not domain.endswith(".")
+
+
 def build_users_json(entries: list[tuple[str, str, str, str]]) -> str:
-    """(username, password, role, name) → `DSS_USERS`-д тавих JSON мөр.
+    """(email, password, role, name) → `DSS_USERS`-д тавих JSON мөр.
 
     Нууц үгийг hash болгоно — задлагдах хэлбэрээр ХЭЗЭЭ Ч хадгалахгүй.
     """
     payload = []
-    for username, password, role, name in entries:
+    for email, password, role, name in entries:
         if role not in ROLES:
             raise ValueError(f"Эрх буруу: {role}")
+        if not looks_like_email(email):
+            raise ValueError(f"Имэйл хаяг буруу: {email}")
         payload.append({
-            "username": username.strip().lower(),
+            "email": email.strip().lower(),
             "password_hash": hash_password(password),
             "role": role,
-            "name": name.strip() or username.strip(),
+            "name": name.strip() or email.strip(),
         })
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))

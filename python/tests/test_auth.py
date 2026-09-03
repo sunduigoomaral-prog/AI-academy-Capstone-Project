@@ -25,6 +25,7 @@ from auth.store import (  # noqa: E402
     hash_password,
     is_configured,
     load_users,
+    looks_like_email,
     session_ttl,
     verify_password,
 )
@@ -142,8 +143,8 @@ check("байхгүй хэрэглэгч татгалзана", missing.user is 
 
 print("\n   ⚠️ Аль нэр бүртгэлтэйг ЗАДРУУЛАХГҮЙ")
 check("буруу нууц үг ба байхгүй нэр ИЖИЛ мессежээр эхэлнэ",
-      bad.error_mn.startswith("Нэвтрэх нэр эсвэл нууц үг буруу")
-      and missing.error_mn.startswith("Нэвтрэх нэр эсвэл нууц үг буруу"),
+      bad.error_mn.startswith("Имэйл эсвэл нууц үг буруу")
+      and missing.error_mn.startswith("Имэйл эсвэл нууц үг буруу"),
       f"{bad.error_mn!r} vs {missing.error_mn!r}")
 
 
@@ -199,23 +200,69 @@ check("3 эрхийн түвшин тодорхойлогдсон", set(ROLES) =
 # ─────────────────────────────────────────────────────────────
 print("\n6) ТУСЛАХ ХЭРЭГСЭЛ")
 
-raw = build_users_json([("Sara", "нууцҮГ1", "analyst", "Сараа")])
+raw = build_users_json([("Sara@Monos.MN", "нууцҮГ1", "analyst", "Сараа")])
 parsed = json.loads(raw)
 check("build_users_json жагсаалт өгнө", isinstance(parsed, list) and len(parsed) == 1)
 check("нууц үг ЗАДЛАГДАХГҮЙ хэлбэрээр хадгална",
       parsed[0]["password_hash"].startswith(f"{ALGORITHM}$")
       and "нууцҮГ1" not in raw, "нууц үг ил харагдаж байна!")
 check("үүсгэсэн бүртгэлээр нэвтэрч болно",
-      authenticate("sara", "нууцҮГ1", attempts=Attempts(),
+      authenticate("sara@monos.mn", "нууцҮГ1", attempts=Attempts(),
                    env={"DSS_USERS": raw}).user is not None)
+check("имэйл жижиг үсэг болно", parsed[0]["email"] == "sara@monos.mn",
+      f"got {parsed[0].get('email')}")
 check("эрх буруу бол шиднэ",
-      raises(lambda: build_users_json([("a", "b", "хаан", "c")]), ValueError)[0])
+      raises(lambda: build_users_json([("a@b.mn", "x", "хаан", "c")]), ValueError)[0])
+check("имэйл буруу бол шиднэ",
+      raises(lambda: build_users_json([("тэнэг", "x", "admin", "c")]), ValueError)[0])
 
 check("session TTL анхдагч 8 цаг", session_ttl({}) == 8 * 60 * 60)
 check("session TTL хувьсагчаар өөрчлөгдөнө",
       session_ttl({"DSS_SESSION_TTL": "60"}) == 60)
 check("session TTL буруу утга → анхдагч",
       session_ttl({"DSS_SESSION_TTL": "тэнэг"}) == 8 * 60 * 60)
+
+
+
+# ─────────────────────────────────────────────────────────────
+print("\n7) ИМЭЙЛ ХЭЛБЭР")
+
+for good in ("a@b.mn", "ner.ovog@monos.mn", "A@B.CO.UK", "x+tag@mail.com"):
+    check(f"«{good}» зөв", looks_like_email(good))
+for wrong in ("", "тэнэг", "a@b", "@monos.mn", "a@@b.mn", "a b@c.mn",
+              "a@.mn", "a@b."):
+    check(f"«{wrong}» буруу", not looks_like_email(wrong))
+
+print("\n   ⚠️ Нэвтрэх үед хэлбэрийг ШАЛГАХГҮЙ (хаяг задруулахгүй)")
+weird = authenticate("огт-имэйл-биш", "x", attempts=Attempts(), env=env)
+check("буруу хэлбэртэй ч ИЖИЛ мессеж",
+      weird.error_mn.startswith("Имэйл эсвэл нууц үг буруу"),
+      weird.error_mn or "")
+
+
+# ─────────────────────────────────────────────────────────────
+print("\n8) `email` БОЛОН `username` ХОЁУЛАА АЖИЛЛАНА")
+
+new_style = {"DSS_USERS": json.dumps(
+    [{"email": "a@monos.mn", "password_hash": quick("p1"), "role": "admin"}],
+    ensure_ascii=False)}
+old_style = {"DSS_USERS": json.dumps(
+    [{"username": "huuchin", "password_hash": quick("p2"), "role": "viewer"}],
+    ensure_ascii=False)}
+
+check("шинэ `email` түлхүүр ажиллана",
+      authenticate("a@monos.mn", "p1", attempts=Attempts(),
+                   env=new_style).user is not None)
+check("хуучин `username` түлхүүр хэвээр ажиллана",
+      authenticate("huuchin", "p2", attempts=Attempts(),
+                   env=old_style).user is not None)
+check("хоёулаа алга бол алдаа шиднэ",
+      raises(lambda: load_users(
+          {"DSS_USERS": chr(91) + chr(123) + chr(34) + "password_hash"
+           + chr(34) + ":" + chr(34) + "x" + chr(34) + chr(125) + chr(93)}))[0])
+check("user.email нь нэвтрэх таних тэмдэг",
+      authenticate("a@monos.mn", "p1", attempts=Attempts(),
+                   env=new_style).user.email == "a@monos.mn")
 
 
 # ─────────────────────────────────────────────────────────────
