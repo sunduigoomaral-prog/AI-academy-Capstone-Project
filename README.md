@@ -18,7 +18,69 @@
 үнийн хяналт → AI зөвлөмж → dashboard → Excel export гинжин хэлхээг end-to-end
 ажиллуулж баталгаажуулсан. `tsc --noEmit` 0 алдаа.
 
-**URL:** http://localhost:3000/dashboard
+**URL:**
+- Next.js dashboard — http://localhost:3000/dashboard
+- Streamlit (deployment) — http://localhost:8501
+
+---
+
+## Streamlit deployment — 3 файл
+
+Байршуулалтын шаардлагын дагуу үндсэн 3 файл root-д байна:
+
+| # | Файл | Агуулга |
+|---|---|---|
+| 1 | [requirements.txt](requirements.txt) | `streamlit` · `pandas` · `openpyxl` |
+| 2 | [Procfile](Procfile) | `web: streamlit run app.py --server.port 8501 --server.address 0.0.0.0` |
+| 3 | [app.py](app.py) | Streamlit UI — 9 таб |
+
+**Container Port: `8501`**
+
+⚠️ `--server.address 0.0.0.0` байхгүй бол container гаднаас нээгдэхгүй.
+
+### app.py-ийн зарчим
+
+`app.py` дотор **бизнес тооцоолол хийгдэхгүй**. Бүх тоо `python/` доторх
+шалгагдсан engine-үүдээс (`export.collect.collect`) бэлнээр ирнэ — Next.js
+application-тай ЯГ ИЖИЛ логик, ижил тохиргоо (`src/config/*.json`).
+
+```
+app.py  →  export.collect.collect(excel, scope)
+              ├── ingest.pipeline      (өгөгдлийн чанар)
+              ├── analysis.engine      (ABC–XYZ)
+              ├── inventory.engine     (тэнцвэр · шилжүүлэг · худалдан авалт)
+              ├── pricing.engine       (үнийн жишилт · маржины эрсдэл)
+              └── inventory.engine     (AI дүрмийн зөвлөмж)
+```
+
+Excel файл нь **sheet-ийн нэрээр биш, бүтцээр нь** танигдана
+(`dataset-signatures.json`), тул sheet-ийн нэр өөр байсан ч ажиллана.
+
+### Таб
+
+| Таб | Агуулга |
+|---|---|
+| Хяналтын самбар | 12 KPI (ашгийн үзүүлэлт нь **N/A** — эх өгөгдөлд орлого байхгүй) |
+| ABC–XYZ | ABC · XYZ хуваарилалт + 9 хослолын матриц |
+| Нөөцийн тэнцвэр | 6 төлөв + байрлал тус бүрийн шийдвэр |
+| Эрсдэл | CRITICAL / HIGH ач холбогдолтой SKU |
+| Шилжүүлэг | Давуу эрхийн шатлалаар (компани доторх → компани хооронд) |
+| Худалдан авалт | Шилжүүлгээр хаагдаагүй дутагдал |
+| Үнийн хяналт | Нийлүүлэгч хоорондын үнийн зөрүү · боломжит хэмнэлт |
+| AI зөвлөмж | Дүрэмд суурилсан шийдвэр (ач холбогдлоор шүүнэ) |
+| Өгөгдлийн чанар | VALID / WARNING / ERROR + хөдөлгөөнгүй нөөц |
+
+Дээд талд **Excel тайлан татах (17 sheet)** товч байна.
+
+### Локал ажиллуулах
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py --server.port 8501 --server.address 0.0.0.0
+```
+
+⚠️ Streamlit хувилбар нь **PostgreSQL шаардахгүй** — Excel-ээс шууд тооцоолно.
+Next.js хувилбар нь DB ашиглаж, upload түүх болон тооцооллын гүйлтийг хадгална.
 
 ---
 

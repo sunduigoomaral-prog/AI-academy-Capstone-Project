@@ -52,6 +52,7 @@ def build_positions(
 
     period_set = set(periods)
     sales_qty: dict[tuple[str, str], float] = {}
+    sales_value: dict[tuple[str, str], float] = {}
     stock_qty: dict[tuple[str, str], float] = {}
     stock_value: dict[tuple[str, str], float] = {}
     location_meta: dict[str, dict] = {}
@@ -83,6 +84,10 @@ def build_positions(
             if dataset == "SALES":
                 if row.get("period_key") in period_set:
                     sales_qty[key] = sales_qty.get(key, 0.0) + float(row.get("quantity") or 0.0)
+                    # ⚠️ `cogs_amount` нь ӨРТӨГ — орлого БИШ (docs/01 §7)
+                    sales_value[key] = (
+                        sales_value.get(key, 0.0) + float(row.get("cogs_amount") or 0.0)
+                    )
             elif dataset == "STOCK" and row.get("period_key") == stock_period:
                 stock_qty[key] = stock_qty.get(key, 0.0) + float(row.get("quantity_on_hand") or 0.0)
                 stock_value[key] = stock_value.get(key, 0.0) + float(row.get("stock_value") or 0.0)
@@ -121,6 +126,8 @@ def build_positions(
                 current_stock=qty,
                 current_stock_value=value,
                 unit_cost=(value / qty) if qty else None,
+                sales_qty=sales_qty.get((code, location), 0.0),
+                sales_value=sales_value.get((code, location), 0.0),
             )
         )
 

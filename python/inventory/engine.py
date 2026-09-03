@@ -396,6 +396,9 @@ class Position:
     current_stock: float
     current_stock_value: float
     unit_cost: float | None
+    # ── Байрлал тус бүрийн борлуулалт (шүүлттэй KPI-д хэрэгтэй) ──
+    sales_qty: float = 0.0
+    sales_value: float = 0.0
 
 
 @dataclass
