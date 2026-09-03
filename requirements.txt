@@ -1,3 +1,38 @@
-streamlit
-pandas
-openpyxl
+# ─────────────────────────────────────────────────────────────────────
+# Inventory Intelligence & Decision Support System
+# Ашигласан БҮХ гуравдагч сан.
+#
+# Төслийн 34 Python файлын import-ыг бүрэн шалгаж гаргав.
+# Хувилбарууд нь бодит өгөгдөл дээр туршиж баталгаажуулсан хувилбар.
+# ─────────────────────────────────────────────────────────────────────
+
+# Web UI — app.py (Streamlit dashboard, Procfile-аар 8501 порт дээр асна)
+streamlit>=1.40
+
+# Хүснэгт, график бэлтгэх — app.py, python/inspect_excel.py
+pandas>=2.2
+
+# Excel унших ба 17 sheet бүхий тайлан бичих —
+#   python/ingest/pipeline.py, python/export/excel_export.py, python/inspect_excel.py
+openpyxl>=3.1
+
+# ─────────────────────────────────────────────────────────────────────
+# ТАЙЛБАР
+#
+# Дараах модулиуд Python-ий СТАНДАРТ САНД багтдаг тул энд бичих
+# шаардлагагүй (тусад нь суулгадаггүй):
+#   argparse · collections · dataclasses · datetime · functools · hashlib
+#   html · json · math · pathlib · re · sys · tempfile · typing · __future__
+#
+# Дараах сангууд дээрх 3 сангийн ХАМААРЛААР автоматаар суудаг тул
+# шууд бичихгүй (кодод шууд import хийгээгүй):
+#   numpy (pandas-аас) · altair, pyarrow (streamlit-ээс)
+#
+# ⚠️ openai БИЧИХГҮЙ — энэ системийн «AI шийдвэрийн engine» нь
+#    ДҮРЭМД СУУРИЛСАН (src/config/price-control-rules.json), гадны LLM
+#    дуудахгүй. Ашиглаагүй санг бичих нь буруу мэдээлэл өгнө.
+#
+# ⚠️ psycopg2 / prisma БИЧИХГҮЙ — Streamlit хувилбар PostgreSQL
+#    ШААРДАХГҮЙ, Excel-ээс шууд тооцоолно. (Next.js хувилбар нь DB
+#    ашигладаг ч түүний хамаарал package.json дотор байдаг.)
+# ─────────────────────────────────────────────────────────────────────
