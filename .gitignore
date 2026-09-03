@@ -29,3 +29,6 @@ Thumbs.db
 
 # TypeScript build cache — Nixpacks-ийн cache mount-той зөрчилддөг
 tsconfig.tsbuildinfo
+
+# ⚠️ Нэвтрэх мэдээлэл — репо нийтэд нээлттэй тул ХЭЗЭЭ Ч орохгүй
+data/users.json

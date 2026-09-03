@@ -24,6 +24,7 @@ import secrets
 import time
 import unicodedata
 from dataclasses import dataclass
+from pathlib import Path
 
 # ── Тохиргоо ─────────────────────────────────────────────────────────
 
@@ -152,9 +153,50 @@ def verify_password(password: str, encoded: str) -> bool:
 
 # ── Хэрэглэгчийн сан ─────────────────────────────────────────────────
 
+#: Дэлгэцээс хадгалсан хэрэглэгчид. ⚠️ `.gitignore`-т байх ЁСТОЙ.
+USERS_FILE = Path(__file__).resolve().parents[2] / "data" / "users.json"
+
+
 def _raw_users(env: dict[str, str] | None = None) -> str:
+    """Хэрэглэгчийн эх сурвалж.
+
+    1. `DSS_USERS` орчны хувьсагч — ТЭРГҮҮН ЭЭЛЖИНД (байнгын тохиргоо)
+    2. `data/users.json` — тохируулах дэлгэцээс хадгалсан бол
+    """
     source = os.environ if env is None else env
-    return (source.get(USERS_ENV) or "").strip()
+    from_env = (source.get(USERS_ENV) or "").strip()
+    if from_env:
+        return from_env
+
+    # ⚠️ Тест дээр орчныг зориуд өгсөн бол файл руу УНАХГҮЙ —
+    #    тест нь бодит файлаас хамаарах ёсгүй.
+    if env is not None:
+        return ""
+
+    try:
+        if USERS_FILE.is_file():
+            return USERS_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    return ""
+
+
+def save_users_file(raw: str) -> Path:
+    """`data/users.json`-д бичнэ. Зөв эсэхийг ЭХЛЭЭД шалгана."""
+    load_users({USERS_ENV: raw})          # буруу бол AuthError шидэнэ
+    USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    USERS_FILE.write_text(raw, encoding="utf-8")
+    return USERS_FILE
+
+
+def users_source(env: dict[str, str] | None = None) -> str:
+    """Хэрэглэгчид хаанаас ирснийг хэлнэ — дэлгэцэд харуулах зориулалттай."""
+    source = os.environ if env is None else env
+    if (source.get(USERS_ENV) or "").strip():
+        return "env"
+    if env is None and USERS_FILE.is_file():
+        return "file"
+    return "none"
 
 
 def is_configured(env: dict[str, str] | None = None) -> bool:

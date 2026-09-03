@@ -54,6 +54,7 @@ from auth.store import (  # noqa: E402
     is_configured,
     looks_like_email,
     load_users,
+    save_users_file,
     session_ttl,
 )
 from export.collect import collect  # noqa: E402
@@ -1049,15 +1050,26 @@ def render_setup_screen() -> None:
                                  key="setup_role")
         name = cols[1].text_input("Бүтэн нэр", key="setup_name")
 
-        if st.button("Хэрэглэгч үүсгэх", type="primary", use_container_width=True):
+        if st.button("Хадгалаад нэвтрэх", type="primary", use_container_width=True):
             if not looks_like_email(email):
                 st.error("Имэйл хаягаа зөв бичнэ үү (жишээ: ner@monos.mn).")
             elif not password:
                 st.error("Нууц үгээ бөглөнө үү.")
             else:
-                st.session_state["setup_json"] = build_users_json(
-                    [(email, password, role, name)]
-                )
+                raw = build_users_json([(email, password, role, name)])
+                st.session_state["setup_json"] = raw
+                try:
+                    save_users_file(raw)
+                    st.success(
+                        "Хадгаллаа. Одоо энэ имэйл, нууц үгээрээ нэвтэрнэ үү."
+                    )
+                    st.rerun()
+                except OSError as exc:
+                    # Бичих эрхгүй бол — гарын авлагын аргыг доор харуулна
+                    st.warning(
+                        f"Файлд хадгалж чадсангүй ({exc}). Доорх утгыг "
+                        f"{USERS_ENV} орчны хувьсагчид тавина уу."
+                    )
 
         st.markdown(
             "<div class='ii-formpane'><p class='note'>"
@@ -1072,10 +1084,12 @@ def render_setup_screen() -> None:
     generated = st.session_state.get("setup_json")
     if generated:
         st.markdown(
-            f"<div class='ii-card'><h3>Энэ утгыг <code>{esc(USERS_ENV)}</code> "
-            "орчны хувьсагчид тавь</h3><p class='hint'>Dokploy → Application → "
-            "Environment → Add → дараа нь Redeploy. Нууц үг энд ил бичигдээгүй — "
-            "зөвхөн PBKDF2 hash.</p></div>",
+            f"<div class='ii-card'><h3>Байнгын тохиргоо (заавал биш)</h3>"
+            "<p class='hint'>Дээрх хадгалалт нь container дахин байрлуулах "
+            "хүртэл хүчинтэй. Байнгын болгохын тулд энэ утгыг "
+            f"<code>{esc(USERS_ENV)}</code> орчны хувьсагчид тавь: "
+            "Dokploy → Environment → Save → Deploy. Нууц үг энд ил "
+            "бичигдээгүй — зөвхөн PBKDF2 hash.</p></div>",
             unsafe_allow_html=True,
         )
         st.code(generated, language="json")
