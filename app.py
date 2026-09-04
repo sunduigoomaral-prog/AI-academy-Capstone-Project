@@ -75,454 +75,516 @@ st.set_page_config(
 
 CSS = """
 <style>
-  :root {
-    --bg:        #f4f6fa;
-    --card:      #ffffff;
-    --border:    #e8ecf3;
-    --ink:       #1e293b;
-    --muted:     #7c8aa0;
-    --primary:   #2563eb;
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
 
-    /* Хажуугийн бараан цэс */
-    --nav:       #172a45;
-    --nav-hover: #22385a;
-    --nav-ink:   #c7d5e5;
-    --nav-dim:   #7d93ad;
+/* ══════════════════════════════════════════════════════════════
+   ДИЗАЙНЫ СИСТЕМ — ногоон + цагаан, enterprise analytics
+   Нэг л токен багц: өнгө, зай, радиус, сүүдэр, үсэг.
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  /* Гадаргуу */
+  --canvas:    #f5f8f6;
+  --surface:   #ffffff;
+  --surface-2: #fafcfb;
+  --line:      #e3eae6;
+  --line-2:    #eef3f0;
 
-    /* Монос Группын брэнд өнгө — `assets/logo.png`-ээс пиксел
-       түвшинд гаргаж авсан (ногоон навч + тэнхлэг хөх үсэг). */
-    --brand:     #078b4e;   /* Монос ногоон */
-    --brand-2:   #244455;   /* Монос тэнхлэг хөх */
-  }
+  /* Бэх */
+  --ink:       #14241d;
+  --ink-2:     #3d5449;
+  --muted:     #7b9188;
 
-  .stApp { background: var(--bg); }
-  .block-container { padding: 1rem 1.6rem 3rem !important; max-width: 100% !important; }
-  #MainMenu, footer, header[data-testid="stHeader"] { display: none !important; }
+  /* Брэнд — Монос ногоон */
+  --brand:     #078b4e;
+  --brand-600: #067044;
+  --brand-700: #055836;
+  --brand-50:  #e9f6ef;
+  --brand-100: #cfebdd;
 
-  /* ── Толгой ── */
-  .ii-head {
-    display: flex; align-items: center; gap: .75rem;
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: .7rem 1rem; margin-bottom: .85rem;
-  }
-  .ii-logo { font-size: 1.5rem; line-height: 1; }
-  .ii-brand   { font-size: .95rem; font-weight: 800; letter-spacing: .04em; color: var(--ink); }
-  .ii-brand-sub {
-    font-size: .58rem; text-transform: uppercase; letter-spacing: .16em; color: var(--muted);
-  }
-  .ii-chip {
-    display: inline-flex; align-items: center; gap: .4rem;
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: .35rem .7rem; font-size: .78rem; color: var(--muted);
-    background: var(--card); white-space: nowrap;
-  }
-  .ii-chip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  /* Навигаци — гүн ногоон */
+  --nav:       #0a3527;
+  --nav-2:     #124331;
+  --nav-3:     #1a5540;
+  --nav-ink:   #cfe3d8;
+  --nav-dim:   #7ea795;
 
-  /* ── Хуудасны гарчиг ── */
-  .ii-title   { font-size: 1.5rem; font-weight: 700; color: var(--ink); margin: 0; }
-  .ii-sub     { font-size: .85rem; color: var(--muted); margin: .15rem 0 0; }
-  .ii-chips   { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+  /* Утга илэрхийлэх өнгө — брэндээс ТУСДАА */
+  --danger:    #cf3049;  --danger-bg:  #fdeef1;
+  --warn:      #b8730a;  --warn-bg:    #fdf4e6;
+  --info:      #2166a8;  --info-bg:    #eaf2fa;
+  --violet:    #6d4bc4;  --violet-bg:  #f1edfb;
+  --ok:        #078b4e;  --ok-bg:      #e9f6ef;
+  --slate:     #5b7268;  --slate-bg:   #eef2f0;
 
-  /* ── KPI ── */
-  .ii-kpis { display: grid; grid-template-columns: repeat(7, 1fr); gap: .6rem; margin-bottom: .6rem; }
-  @media (max-width: 1500px) { .ii-kpis { grid-template-columns: repeat(4, 1fr); } }
-  @media (max-width: 900px)  { .ii-kpis { grid-template-columns: repeat(2, 1fr); } }
-  .ii-kpi {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: .8rem .9rem; min-height: 104px;
-    display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .ii-kpi-label {
-    font-size: .62rem; font-weight: 700; letter-spacing: .07em;
-    text-transform: uppercase; color: var(--muted); line-height: 1.3;
-  }
-  .ii-kpi-value {
-    font-size: 1.6rem; font-weight: 700; color: var(--ink);
-    font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: .35rem;
-  }
-  .ii-kpi-value.na { color: #94a3b8; }
-  .ii-kpi-sub { font-size: .68rem; color: var(--muted); margin-top: .2rem; }
+  /* Зай — 4px шатлал */
+  --s1: .25rem; --s2: .5rem;  --s3: .75rem;
+  --s4: 1rem;   --s5: 1.5rem; --s6: 2rem;
 
-  /* ── Хайрцаг ── */
-  .ii-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: .8rem;
-  }
-  .ii-card h3 { font-size: 1.05rem; font-weight: 700; color: var(--ink); margin: 0; }
-  .ii-card p.hint { font-size: .78rem; color: var(--muted); margin: .25rem 0 .8rem; }
+  --r-sm: 6px; --r: 10px; --r-lg: 14px;
+  --shadow: 0 1px 2px rgba(16,40,30,.04), 0 1px 3px rgba(16,40,30,.03);
 
-  /* ── ABC×XYZ матриц ── */
-  .ii-matrix { width: 100%; border-collapse: separate; border-spacing: 6px; }
-  .ii-matrix th {
-    font-size: .72rem; font-weight: 600; color: var(--muted);
-    padding: 0 0 .2rem; text-align: center;
-  }
-  .ii-matrix td.rowhead {
-    font-size: .95rem; font-weight: 800; color: var(--muted);
-    width: 22px; text-align: center;
-  }
-  .ii-cell { border-radius: 10px; padding: .55rem .65rem; }
-  .ii-cell .top {
-    display: flex; justify-content: space-between; align-items: baseline;
-    font-weight: 800; font-size: .95rem; margin-bottom: .3rem;
-  }
-  .ii-cell .top span { font-size: .72rem; font-weight: 700; opacity: .85; }
-  .ii-cell .kv {
-    display: flex; justify-content: space-between;
-    font-size: .68rem; line-height: 1.5; font-variant-numeric: tabular-nums;
-  }
-  .ii-cell .kv i { font-style: normal; opacity: .8; }
-  .ii-total { font-size: .95rem; font-weight: 700; color: var(--muted); text-align: center; }
+  --font: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
 
-  /* ── Тэнцвэрийн мөр ── */
-  .ii-bal {
-    display: flex; align-items: center; gap: .7rem;
-    border-radius: 10px; padding: .5rem .75rem; margin-bottom: .35rem;
-    font-variant-numeric: tabular-nums; font-size: .8rem;
-  }
-  .ii-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-  .ii-bal .n     { font-size: 1.05rem; font-weight: 700; min-width: 56px; }
-  .ii-bal .p     { min-width: 52px; color: var(--muted); }
-  .ii-bal .q     { min-width: 78px; text-align: right; color: var(--muted); }
-  .ii-bal .v     { flex: 1; text-align: right; color: var(--ink); font-weight: 600; }
+* { box-sizing: border-box; }
 
-  /* ── Асуултын карт ── */
-  .ii-qa { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; }
-  @media (max-width: 1200px) { .ii-qa { grid-template-columns: repeat(2, 1fr); } }
-  .ii-qa-card {
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: .7rem .8rem; background: #fbfcfe;
-  }
-  .ii-qa-q { font-size: .72rem; color: var(--muted); min-height: 2.2em; }
-  .ii-qa-a {
-    font-size: 1.35rem; font-weight: 700; color: var(--ink);
-    font-variant-numeric: tabular-nums; margin-top: .25rem;
-  }
-  .ii-qa-a.na { font-size: 1rem; color: #94a3b8; }
-  .ii-qa-u { font-size: .66rem; color: var(--muted); }
+html, body, [class*="css"], .stApp, button, input, select, textarea {
+  font-family: var(--font) !important;
+}
 
-  /* ── Тэмдэг ── */
-  .ii-badge {
-    display: inline-block; border-radius: 6px;
-    padding: .1rem .45rem; font-size: .7rem; font-weight: 600;
-  }
+.stApp { background: var(--canvas); color: var(--ink); }
+.block-container {
+  padding: var(--s4) var(--s5) var(--s6) !important;
+  max-width: 100% !important;
+}
+#MainMenu, footer, header[data-testid="stHeader"] { display: none !important; }
 
-  /* ── Мэдэгдэл ── */
-  .ii-note {
-    border-left: 3px solid var(--primary); background: #eef2ff;
-    border-radius: 0 8px 8px 0; padding: .55rem .8rem;
-    font-size: .78rem; color: #3730a3; margin-bottom: .7rem;
-  }
-  .ii-warn {
-    border-left: 3px solid #f59e0b; background: #fffbeb;
-    border-radius: 0 8px 8px 0; padding: .55rem .8rem;
-    font-size: .78rem; color: #92400e; margin-bottom: .7rem;
-  }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #cfdbd5; border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
 
-  /* ── Нэвтрэх дэлгэц ── */
-  .ii-login {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 14px; padding: 1.6rem 1.8rem; margin-top: 1rem;
-  }
-  .ii-login h2 { font-size: 1.25rem; font-weight: 700; color: var(--ink); margin: 0; }
-  .ii-login p  { font-size: .82rem; color: var(--muted); margin: .3rem 0 0; }
+/* ══ ХАЖУУГИЙН НАВИГАЦИ ══════════════════════════════════════ */
+section[data-testid="stSidebar"] {
+  background: var(--nav) !important;
+  border-right: none !important;
+  width: 15.5rem !important;
+}
+section[data-testid="stSidebar"] * { color: var(--nav-ink); }
+section[data-testid="stSidebar"] .block-container {
+  padding: var(--s4) var(--s3) var(--s5) !important;
+}
+.ii-brandbox {
+  display: flex; align-items: center; gap: var(--s2);
+  padding-bottom: var(--s4); margin-bottom: var(--s3);
+  border-bottom: 1px solid var(--nav-2);
+}
+.ii-brandbox img {
+  height: 30px; width: auto; background: #fff;
+  border-radius: var(--r-sm); padding: 3px 6px;
+}
+.ii-brandbox .bn {
+  font-size: .95rem; font-weight: 800; letter-spacing: .03em; color: #fff;
+}
+.ii-brandbox .bs {
+  font-size: .55rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--nav-dim);
+}
+.ii-navhead {
+  font-size: .58rem; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--nav-dim) !important;
+  margin: var(--s4) 0 var(--s1) var(--s2);
+}
+section[data-testid="stSidebar"] .stButton button {
+  background: transparent; border: none; color: var(--nav-ink);
+  text-align: left; justify-content: flex-start;
+  font-size: .84rem; font-weight: 500; padding: .48rem .6rem;
+  border-radius: var(--r-sm); width: 100%; line-height: 1.35;
+  transition: background .12s ease, color .12s ease;
+}
+section[data-testid="stSidebar"] .stButton button:hover {
+  background: var(--nav-2); color: #fff;
+}
+section[data-testid="stSidebar"] .stButton button:focus-visible {
+  outline: 2px solid var(--brand); outline-offset: 1px;
+}
+section[data-testid="stSidebar"] .stButton button[kind="primary"] {
+  background: var(--brand); color: #fff; font-weight: 600;
+}
+.ii-user {
+  display: flex; align-items: center; gap: var(--s2);
+  background: var(--nav-2); border-radius: var(--r);
+  padding: .55rem .65rem; margin-bottom: var(--s2);
+}
+.ii-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  background: var(--brand); color: #fff; font-weight: 700; font-size: .8rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.ii-user .who { font-size: .8rem; font-weight: 600; color: #fff; line-height: 1.25; }
+.ii-user .role { font-size: .62rem; color: var(--nav-dim); }
+.ii-navfoot {
+  margin-top: var(--s4); padding-top: var(--s3);
+  border-top: 1px solid var(--nav-2);
+  font-size: .64rem; color: var(--nav-dim); line-height: 1.7;
+}
+.ii-navfoot b { color: var(--nav-ink); font-weight: 600; }
 
-  /* ── Брэндийн самбар (нэвтрэх дэлгэцийн зүүн тал) ── */
-  .ii-brandpane {
-    background: linear-gradient(150deg, var(--brand) 0%, var(--brand-2) 100%);
-    border-radius: 18px; padding: 2.1rem 2rem 1.6rem;
-    color: #fff; min-height: 460px;
-    display: flex; flex-direction: column; justify-content: space-between;
-    box-shadow: 0 18px 40px -22px rgba(15, 23, 42, .55);
-  }
-  /* ⚠️ Логоны үсэг тэнхлэг хөх тул бараан дэвсгэрт уншигдахгүй.
-     Албан ёсны тэмдгийг ӨӨРЧЛӨХГҮЙГЭЭР цагаан суурин дээр байрлуулна. */
-  .ii-brandpane .logo {
-    margin-bottom: 1.5rem; background: #fff; border-radius: 12px;
-    padding: .6rem .85rem; display: inline-block;
-    box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .35);
-  }
-  .ii-brandpane .logo img { height: 44px; width: auto; display: block; }
-  .ii-wordmark {
-    font-size: 1.7rem; font-weight: 800; letter-spacing: .22em;
-    line-height: 1; color: #fff;
-  }
-  .ii-wordmark-sub {
-    font-size: .58rem; letter-spacing: .2em; text-transform: uppercase;
-    color: rgba(255, 255, 255, .68); margin-top: .35rem;
-  }
-  .ii-brandpane h1 {
-    font-size: 1.6rem; font-weight: 700; line-height: 1.25;
-    margin: 0 0 .5rem; color: #fff;
-  }
-  .ii-brandpane .lede {
-    font-size: .84rem; line-height: 1.55; color: rgba(255, 255, 255, .8);
-    margin: 0 0 1.4rem; max-width: 34ch;
-  }
-  .ii-feat { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .6rem; }
-  .ii-feat .ico {
-    width: 26px; height: 26px; border-radius: 8px; flex: none;
-    background: rgba(255, 255, 255, .14); display: flex;
-    align-items: center; justify-content: center; font-size: .8rem;
-  }
-  .ii-feat .txt { font-size: .78rem; line-height: 1.4; color: rgba(255, 255, 255, .9); }
-  .ii-feat .txt b { color: #fff; font-weight: 600; }
-  .ii-brandfoot {
-    font-size: .66rem; color: rgba(255, 255, 255, .55);
-    border-top: 1px solid rgba(255, 255, 255, .16);
-    padding-top: .8rem; margin-top: 1.2rem;
-  }
+/* ══ ХУУДАСНЫ ТОЛГОЙ ═════════════════════════════════════════ */
+.ii-topbar {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--s4); flex-wrap: wrap; margin-bottom: var(--s3);
+}
+.ii-topbar h1 {
+  font-size: 1.4rem; font-weight: 700; color: var(--ink);
+  margin: 0; letter-spacing: -.015em;
+}
+.ii-topbar .sub { font-size: .8rem; color: var(--muted); margin: .15rem 0 0; }
+.ii-pills, .ii-chips { display: flex; gap: var(--s1); flex-wrap: wrap; }
+.ii-pill, .ii-chip {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: .32rem .6rem;
+  font-size: .72rem; color: var(--muted); white-space: nowrap;
+}
+.ii-pill b, .ii-chip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.ii-title { font-size: 1.4rem; font-weight: 700; color: var(--ink); margin: 0; }
+.ii-sub { font-size: .8rem; color: var(--muted); margin: .15rem 0 0; }
 
-  /* ── Нэвтрэх маягт (баруун тал) ── */
-  .ii-formpane { padding: 1.6rem .4rem 0 1.4rem; }
-  .ii-formpane .eyebrow {
-    font-size: .6rem; font-weight: 700; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--brand); margin-bottom: .4rem;
-  }
-  .ii-formpane h2 { font-size: 1.55rem; font-weight: 700; color: var(--ink); margin: 0; }
-  .ii-formpane p.sub {
-    font-size: .82rem; color: var(--muted); margin: .35rem 0 1.2rem; line-height: 1.5;
-  }
-  .ii-formpane .note {
-    font-size: .7rem; color: var(--muted); line-height: 1.5;
-    border-top: 1px solid var(--border); padding-top: .8rem; margin-top: 1.2rem;
-  }
+/* ══ КАРТ / ПАНЕЛ ════════════════════════════════════════════ */
+.ii-card, .sm-panel {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: var(--s4) var(--s4);
+  box-shadow: var(--shadow); margin-bottom: var(--s3);
+}
+.sm-panel { height: 100%; margin-bottom: 0; }
+.ii-card h3, .sm-panel h3 {
+  font-size: .95rem; font-weight: 700; color: var(--ink);
+  margin: 0 0 .1rem; letter-spacing: -.005em;
+}
+.ii-card p.hint, .sm-panel .hint {
+  font-size: .72rem; color: var(--muted); margin: .15rem 0 var(--s3);
+}
+.ii-card p.hint:last-child, .sm-panel .hint:last-child { margin-bottom: 0; }
 
-  /* Нэвтрэх дэлгэц дээр талбарууд том, тод */
-  .ii-auth div[data-testid="stTextInput"] input {
-    height: 2.7rem; font-size: .9rem; border-radius: 10px;
-  }
-  .ii-auth div[data-testid="stTextInput"] label {
-    display: block !important; font-size: .72rem !important;
-    font-weight: 600 !important; color: var(--muted) !important;
-  }
-  .ii-auth div[data-testid="stForm"] { border: none; padding: 0; }
-  .ii-auth button[kind="primaryFormSubmit"], .ii-auth button[kind="primary"] {
-    height: 2.7rem; border-radius: 10px; font-weight: 600;
-    background: var(--brand); border-color: var(--brand);
-  }
-  /* Нэвтрээгүй үед хажуугийн самбар хэрэггүй */
-  .ii-auth-page section[data-testid="stSidebar"] { display: none !important; }
-  .ii-user {
-    display: flex; align-items: center; gap: .55rem;
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: .55rem .7rem; margin-bottom: .5rem; background: #fbfcfe;
-  }
-  .ii-avatar {
-    width: 30px; height: 30px; border-radius: 50%; flex: none;
-    background: var(--primary); color: #fff; font-weight: 700;
-    font-size: .8rem; display: flex; align-items: center; justify-content: center;
-  }
-  .ii-user .who  { font-size: .82rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
-  .ii-user .role { font-size: .66rem; color: var(--muted); }
+/* ══ KPI ═════════════════════════════════════════════════════ */
+.sm-kpis {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s2); margin-bottom: var(--s3);
+}
+.ii-kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: var(--s2); margin-bottom: var(--s3);
+}
+@media (max-width: 1400px) { .sm-kpis { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width: 820px)  { .sm-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 
-  /* ══ STOCKMIND загвар ══════════════════════════════ */
+.sm-kpi, .ii-kpi {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: .85rem .95rem;
+  box-shadow: var(--shadow);
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 6.2rem;
+}
+.sm-kpi .top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s2);
+}
+.sm-kpi .lab, .ii-kpi-label {
+  font-size: .62rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted); line-height: 1.35;
+}
+.sm-kpi .ico {
+  width: 2.1rem; height: 2.1rem; border-radius: var(--r); flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: .95rem;
+}
+.sm-kpi .val, .ii-kpi-value {
+  font-size: 1.35rem; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+  margin-top: .4rem; letter-spacing: -.02em;
+}
+.ii-kpi-value.na { color: var(--muted); font-size: 1.05rem; }
+.sm-kpi .unit, .ii-kpi-sub { font-size: .66rem; color: var(--muted); margin-top: .1rem; }
+.sm-kpi .foot {
+  margin-top: .5rem; padding-top: .45rem; border-top: 1px solid var(--line-2);
+  font-size: .68rem; color: var(--muted);
+}
+.sm-kpi .foot b { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
-  /* ── Хажуугийн цэс — бараан ── */
-  section[data-testid="stSidebar"] {
-    background: var(--nav) !important;
-    border-right: none !important;
-    width: 15rem !important;
-  }
-  section[data-testid="stSidebar"] * { color: var(--nav-ink); }
-  section[data-testid="stSidebar"] .block-container { padding: 1.1rem .8rem !important; }
-  .ii-navhead {
-    font-size: .58rem; font-weight: 700; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--nav-dim) !important;
-    margin: 1.1rem 0 .35rem .3rem;
-  }
-  section[data-testid="stSidebar"] .stButton button {
-    background: transparent; border: none; color: var(--nav-ink);
-    text-align: left; justify-content: flex-start;
-    font-size: .84rem; font-weight: 500; padding: .5rem .7rem;
-    border-radius: 8px; width: 100%;
-  }
-  section[data-testid="stSidebar"] .stButton button:hover {
-    background: var(--nav-hover); color: #fff;
-  }
-  section[data-testid="stSidebar"] .stButton button[kind="primary"] {
-    background: var(--brand); color: #fff; font-weight: 600;
-  }
-  .ii-brandbox {
-    display: flex; align-items: center; gap: .6rem;
-    padding: .2rem .3rem 1rem; margin-bottom: .3rem;
-    border-bottom: 1px solid var(--nav-hover);
-  }
-  .ii-brandbox img { height: 30px; width: auto; background: #fff;
-    border-radius: 6px; padding: 3px 5px; }
-  .ii-brandbox .bn { font-size: .95rem; font-weight: 800; letter-spacing: .04em; color: #fff; }
-  .ii-brandbox .bs { font-size: .55rem; letter-spacing: .09em;
-    text-transform: uppercase; color: var(--nav-dim); }
-  .ii-navfoot {
-    margin-top: 1.4rem; padding-top: .8rem;
-    border-top: 1px solid var(--nav-hover);
-    font-size: .66rem; color: var(--nav-dim); line-height: 1.6;
-  }
-  .ii-navfoot b { color: var(--nav-ink); font-weight: 600; }
+/* ══ ТЭМДЭГ ══════════════════════════════════════════════════ */
+.ii-badge, .sm-chip {
+  display: inline-block; border-radius: 999px;
+  padding: .14em .55em; font-size: .66rem; font-weight: 600;
+  line-height: 1.5; white-space: nowrap;
+}
 
-  /* ── Дээд мөр ── */
-  .ii-topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 1rem; flex-wrap: wrap; margin-bottom: .9rem;
-  }
-  .ii-topbar h1 {
-    font-size: 1.35rem; font-weight: 700; color: var(--ink); margin: 0;
-  }
-  .ii-topbar .sub { font-size: .78rem; color: var(--muted); margin: .1rem 0 0; }
-  .ii-pills { display: flex; gap: .4rem; flex-wrap: wrap; }
-  .ii-pill {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 8px; padding: .35rem .7rem;
-    font-size: .74rem; color: var(--muted); white-space: nowrap;
-  }
-  .ii-pill b { color: var(--ink); font-variant-numeric: tabular-nums; }
+/* ══ ДОНУТ ═══════════════════════════════════════════════════ */
+.sm-donut-wrap { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }
+.sm-donut {
+  width: 132px; height: 132px; border-radius: 50%; flex: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.sm-donut .hole {
+  width: 86px; height: 86px; border-radius: 50%; background: var(--surface);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.sm-donut .hn {
+  font-size: 1.1rem; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.sm-donut .hl {
+  font-size: .55rem; color: var(--muted); letter-spacing: .1em; margin-top: .1rem;
+}
+.sm-legend { display: grid; gap: .45rem; flex: 1; min-width: 9rem; }
+.sm-leg { display: flex; align-items: center; gap: var(--s2); font-size: .75rem; }
+.sm-leg .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.sm-leg .nm { color: var(--ink-2); font-weight: 500; }
+.sm-leg .ct {
+  margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums;
+}
 
-  /* ── KPI карт ── */
-  .sm-kpis {
-    display: grid; grid-template-columns: repeat(5, 1fr);
-    gap: .7rem; margin-bottom: .9rem;
-  }
-  @media (max-width: 1400px) { .sm-kpis { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 800px)  { .sm-kpis { grid-template-columns: repeat(2, 1fr); } }
-  .sm-kpi {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: .95rem 1rem;
-    box-shadow: 0 1px 3px rgba(16, 30, 54, .04);
-  }
-  .sm-kpi .top {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem;
-  }
-  .sm-kpi .lab {
-    font-size: .64rem; font-weight: 700; letter-spacing: .09em;
-    text-transform: uppercase;
-  }
-  .sm-kpi .ico {
-    width: 2.3rem; height: 2.3rem; border-radius: 10px; flex: none;
-    display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
-  }
-  .sm-kpi .val {
-    font-size: 1.42rem; font-weight: 700; color: var(--ink);
-    font-variant-numeric: tabular-nums; line-height: 1.2; margin-top: .5rem;
-  }
-  .sm-kpi .unit { font-size: .68rem; color: var(--muted); margin-top: .1rem; }
-  .sm-kpi .foot {
-    margin-top: .55rem; padding-top: .5rem; border-top: 1px solid var(--border);
-    font-size: .7rem; color: var(--muted);
-  }
-  .sm-kpi .foot b { font-variant-numeric: tabular-nums; }
+/* ══ БАГАНАН ДИАГРАМ ═════════════════════════════════════════ */
+.sm-bars { display: flex; align-items: flex-end; gap: var(--s2); height: 140px; }
+.sm-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; }
+.sm-bar .n {
+  font-size: .66rem; font-weight: 600; color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.sm-bar .col {
+  width: 100%; background: linear-gradient(180deg, var(--brand) 0%, var(--brand-600) 100%);
+  border-radius: var(--r-sm) var(--r-sm) 0 0; min-height: 3px;
+}
+.sm-xlabels { display: flex; gap: var(--s2); margin-top: .35rem; }
+.sm-xlabels span {
+  flex: 1; text-align: center; font-size: .6rem; color: var(--muted); line-height: 1.3;
+}
 
-  /* ── Панел ── */
-  .sm-panel {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1rem 1.1rem; height: 100%;
-    box-shadow: 0 1px 3px rgba(16, 30, 54, .04);
-  }
-  .sm-panel h3 {
-    font-size: .92rem; font-weight: 700; color: var(--ink); margin: 0 0 .1rem;
-  }
-  .sm-panel .hint { font-size: .7rem; color: var(--muted); margin: 0 0 .9rem; }
+/* ══ ЖАГСААЛТЫН МӨР ══════════════════════════════════════════ */
+.sm-list { display: grid; gap: .4rem; }
+.sm-item {
+  display: flex; align-items: center; gap: var(--s2);
+  border: 1px solid var(--line); border-radius: var(--r); padding: .5rem .65rem;
+  transition: border-color .12s ease;
+}
+.sm-item:hover { border-color: var(--brand-100); }
+.sm-item .ico {
+  width: 1.75rem; height: 1.75rem; border-radius: var(--r-sm); flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: .78rem;
+}
+.sm-item .nm { font-size: .77rem; font-weight: 600; color: var(--ink); }
+.sm-item .rt {
+  margin-left: auto; text-align: right; font-size: .68rem; color: var(--muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.sm-item .rt b { display: block; color: var(--ink); font-size: .8rem; }
 
-  /* ── Донут ── */
-  .sm-donut-wrap { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; }
-  .sm-donut {
-    width: 138px; height: 138px; border-radius: 50%; flex: none;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .sm-donut .hole {
-    width: 88px; height: 88px; border-radius: 50%; background: var(--card);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  .sm-donut .hn {
-    font-size: 1.15rem; font-weight: 700; color: var(--ink);
-    font-variant-numeric: tabular-nums; line-height: 1.1;
-  }
-  .sm-donut .hl { font-size: .58rem; color: var(--muted); letter-spacing: .06em; }
-  .sm-legend { display: grid; gap: .5rem; flex: 1; min-width: 9rem; }
-  .sm-leg { display: flex; align-items: center; gap: .5rem; font-size: .76rem; }
-  .sm-leg .sw { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-  .sm-leg .nm { color: var(--ink); font-weight: 600; }
-  .sm-leg .ct { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* ══ HTML ХҮСНЭГТ ════════════════════════════════════════════ */
+.scrollx { overflow-x: auto; }
+.sm-tbl { width: 100%; border-collapse: collapse; font-size: .73rem; }
+.sm-tbl th {
+  font-size: .58rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); text-align: left; padding: 0 .5rem .4rem 0;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.sm-tbl td {
+  padding: .42rem .5rem; padding-left: 0;
+  border-bottom: 1px solid var(--line-2); color: var(--ink-2); vertical-align: middle;
+}
+.sm-tbl tbody tr:hover td { background: var(--surface-2); }
+.sm-tbl tr:last-child td { border-bottom: none; }
+.sm-tbl .num {
+  text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: var(--ink);
+}
+.sm-tbl .nm {
+  max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--ink); font-weight: 500;
+}
 
-  /* ── Босоо баганан диаграм ── */
-  .sm-bars { display: flex; align-items: flex-end; gap: .55rem; height: 148px; }
-  .sm-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .3rem; }
-  .sm-bar .n {
-    font-size: .68rem; font-weight: 600; color: var(--ink);
-    font-variant-numeric: tabular-nums;
-  }
-  .sm-bar .col {
-    width: 100%; background: var(--brand); border-radius: 4px 4px 0 0; min-height: 3px;
-  }
-  .sm-xlabels { display: flex; gap: .55rem; margin-top: .4rem; }
-  .sm-xlabels span {
-    flex: 1; text-align: center; font-size: .6rem; color: var(--muted); line-height: 1.25;
-  }
+/* ══ STREAMLIT DATAFRAME ═════════════════════════════════════ */
+div[data-testid="stDataFrame"] {
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  overflow: hidden; box-shadow: var(--shadow); background: var(--surface);
+}
+div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
 
-  /* ── Жагсаалтын мөр ── */
-  .sm-list { display: grid; gap: .45rem; }
-  .sm-item {
-    display: flex; align-items: center; gap: .65rem;
-    border: 1px solid var(--border); border-radius: 9px; padding: .55rem .7rem;
-  }
-  .sm-item .ico {
-    width: 1.85rem; height: 1.85rem; border-radius: 7px; flex: none;
-    display: flex; align-items: center; justify-content: center; font-size: .82rem;
-  }
-  .sm-item .nm { font-size: .78rem; font-weight: 600; color: var(--ink); }
-  .sm-item .rt {
-    margin-left: auto; text-align: right; font-size: .72rem; color: var(--muted);
-    font-variant-numeric: tabular-nums; white-space: nowrap;
-  }
-  .sm-item .rt b { display: block; color: var(--ink); font-size: .8rem; }
+/* ══ ABC × XYZ МАТРИЦ ════════════════════════════════════════ */
+.ii-matrix { width: 100%; border-collapse: separate; border-spacing: 5px; }
+.ii-matrix th {
+  font-size: .68rem; font-weight: 600; color: var(--muted);
+  padding: 0 0 .15rem; text-align: center;
+}
+.ii-matrix td.rowhead {
+  font-size: .9rem; font-weight: 800; color: var(--muted);
+  width: 20px; text-align: center;
+}
+.ii-cell { border-radius: var(--r); padding: .5rem .6rem; }
+.ii-cell .top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-weight: 800; font-size: .9rem; margin-bottom: .25rem;
+}
+.ii-cell .top span { font-size: .68rem; font-weight: 700; opacity: .82; }
+.ii-cell .kv {
+  display: flex; justify-content: space-between;
+  font-size: .65rem; line-height: 1.55; font-variant-numeric: tabular-nums;
+}
+.ii-cell .kv i { font-style: normal; opacity: .78; }
+.ii-total {
+  font-size: .9rem; font-weight: 700; color: var(--muted); text-align: center;
+}
 
-  /* ── Хүснэгт ── */
-  .sm-tbl { width: 100%; border-collapse: collapse; font-size: .74rem; }
-  .sm-tbl th {
-    font-size: .6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--muted); text-align: left; padding: 0 .5rem .45rem 0;
-    border-bottom: 1px solid var(--border); white-space: nowrap;
-  }
-  .sm-tbl td {
-    padding: .42rem .5rem .42rem 0; border-bottom: 1px solid var(--border);
-    color: var(--ink); vertical-align: middle;
-  }
-  .sm-tbl tr:last-child td { border-bottom: none; }
-  .sm-tbl .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .sm-tbl .nm {
-    max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .sm-chip {
-    display: inline-block; border-radius: 5px; padding: .1em .4em;
-    font-size: .62rem; font-weight: 600; white-space: nowrap;
-  }
+/* ══ ТЭНЦВЭРИЙН МӨР ══════════════════════════════════════════ */
+.ii-bal {
+  display: flex; align-items: center; gap: var(--s2);
+  border-radius: var(--r); padding: .45rem .7rem; margin-bottom: .3rem;
+  font-variant-numeric: tabular-nums; font-size: .76rem;
+}
+.ii-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.ii-bal .n { font-size: 1rem; font-weight: 700; min-width: 52px; }
+.ii-bal .p { min-width: 48px; color: var(--muted); }
+.ii-bal .q { min-width: 74px; text-align: right; color: var(--muted); }
+.ii-bal .v { flex: 1; text-align: right; color: var(--ink); font-weight: 600; }
 
-  /* ── Доод хураангуй ── */
-  .sm-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: .7rem; margin-top: .9rem; }
-  @media (max-width: 1100px) { .sm-tiles { grid-template-columns: repeat(2, 1fr); } }
-  .sm-tile {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: .85rem 1rem; display: flex; align-items: center; gap: .8rem;
-  }
-  .sm-tile .ico {
-    width: 2.5rem; height: 2.5rem; border-radius: 12px; flex: none;
-    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
-  }
-  .sm-tile .lab { font-size: .66rem; color: var(--muted); line-height: 1.35; }
-  .sm-tile .val {
-    font-size: 1.12rem; font-weight: 700; color: var(--ink);
-    font-variant-numeric: tabular-nums;
-  }
+/* ══ АСУУЛТЫН КАРТ ═══════════════════════════════════════════ */
+.ii-qa { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem,1fr)); gap: var(--s2); }
+.ii-qa-card {
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: .65rem .75rem; background: var(--surface);
+}
+.ii-qa-q { font-size: .7rem; color: var(--muted); min-height: 2.4em; line-height: 1.4; }
+.ii-qa-a {
+  font-size: 1.25rem; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums; margin-top: .2rem; letter-spacing: -.02em;
+}
+.ii-qa-a.na { font-size: .95rem; color: var(--muted); }
+.ii-qa-u { font-size: .63rem; color: var(--muted); line-height: 1.4; }
 
-  /* ── Streamlit удирдлагууд ── */
-  section[data-testid="stSidebar"] { background: var(--card); border-right: 1px solid var(--border); }
-  section[data-testid="stSidebar"] .block-container { padding-top: 1rem !important; }
-  div[data-testid="stSelectbox"] label, div[data-testid="stMultiSelect"] label { display: none; }
-  .stRadio [role="radiogroup"] { gap: .1rem; }
-  .ii-navhead {
-    font-size: .6rem; font-weight: 700; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--muted); margin: .8rem 0 .2rem;
-  }
-  .scrollx { overflow-x: auto; }
+/* ══ ДООД ХУРААНГУЙ ══════════════════════════════════════════ */
+.sm-tiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--s2); margin-top: var(--s3);
+}
+.sm-tile {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  padding: .8rem .95rem; display: flex; align-items: center; gap: var(--s3);
+  box-shadow: var(--shadow);
+}
+.sm-tile .ico {
+  width: 2.3rem; height: 2.3rem; border-radius: var(--r); flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.sm-tile .lab { font-size: .64rem; color: var(--muted); line-height: 1.4; }
+.sm-tile .val {
+  font-size: 1.05rem; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+
+/* ══ МЭДЭГДЭЛ ════════════════════════════════════════════════ */
+.ii-note, .ii-warn {
+  border-radius: var(--r); padding: .55rem .8rem;
+  font-size: .75rem; margin-bottom: var(--s3); line-height: 1.55;
+}
+.ii-note {
+  background: var(--brand-50); border: 1px solid var(--brand-100); color: var(--brand-700);
+}
+.ii-warn { background: var(--warn-bg); border: 1px solid #f2ddb8; color: var(--warn); }
+.ii-note b, .ii-warn b { font-weight: 700; }
+
+.ii-empty {
+  border: 1px dashed var(--line); border-radius: var(--r-lg);
+  padding: var(--s5); text-align: center; color: var(--muted);
+  font-size: .82rem; background: var(--surface-2);
+}
+
+/* ══ НЭВТРЭХ ДЭЛГЭЦ ══════════════════════════════════════════ */
+.ii-brandpane {
+  background: linear-gradient(155deg, var(--brand) 0%, var(--nav) 100%);
+  border-radius: 18px; padding: 2.1rem 2rem 1.5rem;
+  color: #fff; min-height: 27rem;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: 0 20px 44px -26px rgba(10, 53, 39, .6);
+}
+.ii-brandpane .logo {
+  margin-bottom: var(--s5); background: #fff; border-radius: var(--r);
+  padding: .55rem .8rem; display: inline-block;
+}
+.ii-brandpane .logo img { height: 42px; width: auto; display: block; }
+.ii-wordmark { font-size: 1.5rem; font-weight: 800; letter-spacing: .2em; color: #fff; }
+.ii-wordmark-sub {
+  font-size: .55rem; letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(255,255,255,.65); margin-top: .3rem;
+}
+.ii-brandpane h1 {
+  font-size: 1.55rem; font-weight: 700; line-height: 1.25;
+  margin: 0 0 .5rem; color: #fff; letter-spacing: -.02em;
+}
+.ii-brandpane .lede {
+  font-size: .82rem; line-height: 1.6; color: rgba(255,255,255,.78);
+  margin: 0 0 var(--s5); max-width: 34ch;
+}
+.ii-feat { display: flex; gap: var(--s2); align-items: flex-start; margin-bottom: .55rem; }
+.ii-feat .ico {
+  width: 26px; height: 26px; border-radius: var(--r-sm); flex: none;
+  background: rgba(255,255,255,.15); display: flex;
+  align-items: center; justify-content: center; font-size: .78rem;
+}
+.ii-feat .txt { font-size: .76rem; line-height: 1.45; color: rgba(255,255,255,.88); }
+.ii-feat .txt b { color: #fff; font-weight: 600; }
+.ii-brandfoot {
+  font-size: .64rem; color: rgba(255,255,255,.55);
+  border-top: 1px solid rgba(255,255,255,.16);
+  padding-top: var(--s3); margin-top: var(--s4);
+}
+.ii-formpane { padding: var(--s5) var(--s1) 0 var(--s4); }
+.ii-formpane .eyebrow {
+  font-size: .58rem; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--brand); margin-bottom: .35rem;
+}
+.ii-formpane h2 {
+  font-size: 1.5rem; font-weight: 700; color: var(--ink);
+  margin: 0; letter-spacing: -.02em;
+}
+.ii-formpane p.sub {
+  font-size: .8rem; color: var(--muted); margin: .35rem 0 var(--s4); line-height: 1.55;
+}
+.ii-formpane .note {
+  font-size: .68rem; color: var(--muted); line-height: 1.6;
+  border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s4);
+}
+.ii-auth-page section[data-testid="stSidebar"] { display: none !important; }
+
+/* ══ ШҮҮЛТҮҮРИЙН ЗУРВАС ═══════════════════════════════════════ */
+.ii-filterbar {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: .6rem .8rem .2rem;
+  box-shadow: var(--shadow); margin-bottom: var(--s3);
+}
+.ii-filterlab {
+  font-size: .58rem; font-weight: 700; letter-spacing: .11em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: .2rem;
+}
+
+/* ══ STREAMLIT УДИРДЛАГА ═════════════════════════════════════ */
+div[data-testid="stSelectbox"] label,
+div[data-testid="stMultiSelect"] label { display: none; }
+div[data-baseweb="select"] > div, div[data-baseweb="input"] > div {
+  border-radius: var(--r) !important; border-color: var(--line) !important;
+  background: var(--surface) !important; min-height: 2.35rem;
+}
+div[data-baseweb="select"] > div:hover { border-color: var(--brand-100) !important; }
+.stButton button {
+  border-radius: var(--r); font-weight: 600; font-size: .8rem;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+  transition: all .12s ease;
+}
+.stButton button:hover { border-color: var(--brand); color: var(--brand); }
+.stButton button[kind="primary"],
+.stButton button[kind="primaryFormSubmit"] {
+  background: var(--brand); border-color: var(--brand); color: #fff; height: 2.5rem;
+}
+.stButton button[kind="primary"]:hover,
+.stButton button[kind="primaryFormSubmit"]:hover {
+  background: var(--brand-600); border-color: var(--brand-600); color: #fff;
+}
+div[data-testid="stDownloadButton"] button {
+  background: var(--brand); border-color: var(--brand); color: #fff;
+  border-radius: var(--r); font-weight: 600;
+}
+div[data-testid="stDownloadButton"] button:hover {
+  background: var(--brand-600); color: #fff;
+}
+.ii-auth div[data-testid="stTextInput"] label {
+  display: block !important; font-size: .7rem !important;
+  font-weight: 600 !important; color: var(--muted) !important;
+}
+.ii-auth div[data-testid="stTextInput"] input { height: 2.5rem; font-size: .88rem; }
+.ii-auth div[data-testid="stForm"] { border: none; padding: 0; }
+div[data-testid="stForm"] { border: none; padding: 0; }
+
+/* Мөрийн хоорондын зайг жигдрүүлэх */
+div[data-testid="stVerticalBlock"] > div:empty { display: none; }
+hr { border-color: var(--line); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
 </style>
 """
 
@@ -641,32 +703,54 @@ def build_excel(file_bytes: bytes, file_name: str) -> bytes:
 # ─────────────────────────────────────────────────────────────────────
 
 def page_head(title: str, subtitle: str, view: dict, meta: dict) -> None:
-    left, right = st.columns([3, 2])
-    with left:
-        st.markdown(
-            f"<h2 class='ii-title'>{esc(title)}</h2>"
-            f"<p class='ii-sub'>{esc(subtitle)}</p>",
-            unsafe_allow_html=True,
-        )
-    with right:
-        chips = [
-            f"Тооцооны сар: <b>{esc(meta['calculationMonth'])}</b>",
-            f"<b>{esc(meta['periods'][0])}</b> … <b>{esc(meta['periods'][-1])}</b>",
-            f"<b>{view['scope']['positions']:,}</b> байрлал",
-        ]
-        st.markdown(
-            "<div class='ii-chips'>"
-            + "".join(f"<span class='ii-chip'>{c}</span>" for c in chips)
-            + "</div>",
-            unsafe_allow_html=True,
-        )
+    """Бүх хуудсанд НЭГ ижил толгой — гарчиг зүүн, хамрах хүрээ баруун."""
+    scope = view["scope"]
+    st.markdown(
+        f"<div class='ii-topbar'><div>"
+        f"<h1>{esc(title)}</h1>"
+        f"<p class='sub'>{esc(subtitle)}</p>"
+        f"</div><div class='ii-pills'>"
+        f"<span class='ii-pill'>Тооцооны сар <b>{esc(meta['calculationMonth'])}</b></span>"
+        f"<span class='ii-pill'><b>{esc(meta['periods'][0])}</b> … "
+        f"<b>{esc(meta['periods'][-1])}</b></span>"
+        f"<span class='ii-pill'><b>{scope['skus']:,}</b> SKU</span>"
+        f"<span class='ii-pill'><b>{scope['positions']:,}</b> байрлал</span>"
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
     if view["filter_active"]:
         st.markdown(
-            "<div class='ii-note'>Шүүлтүүр идэвхтэй — KPI · матриц · тэнцвэр · "
-            "эрсдэл · татан авалт · шилжүүлэг · үнэ · AI бүгд энэ хамрах "
-            "хүрээгээр тооцогдож байна.</div>",
+            "<div class='ii-note'>Шүүлтүүр идэвхтэй — бүх үзүүлэлт энэ "
+            "хамрах хүрээгээр тооцогдож байна.</div>",
             unsafe_allow_html=True,
         )
+
+
+def empty_state(text: str) -> None:
+    """Хоосон төлөв — бүх хуудсанд нэг ижил."""
+    st.markdown(f"<div class='ii-empty'>{esc(text)}</div>", unsafe_allow_html=True)
+
+
+def panel_open(title: str, hint: str = "") -> None:
+    """Гарчигтай панел нээх (агуулгыг дараа нь st.* -ээр нэмнэ)."""
+    st.markdown(
+        f"<div class='ii-card' style='margin-bottom:.4rem'><h3>{esc(title)}</h3>"
+        + (f"<p class='hint' style='margin-bottom:0'>{esc(hint)}</p>" if hint else "")
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def status_badge(status: str) -> str:
+    tone = STATUS_TONE[status]
+    return (f"<span class='ii-badge' style='background:{tone['bg']};"
+            f"color:{tone['fg']}'>{esc(tone['labelMn'])}</span>")
+
+
+def priority_badge(priority: str) -> str:
+    tone = PRIORITY_TONE.get(priority, {"bg": "#eef2f0", "fg": "#5b7268"})
+    return (f"<span class='ii-badge' style='background:{tone['bg']};"
+            f"color:{tone['fg']}'>{esc(priority)}</span>")
 
 
 def render_kpi_grid(items: list[dict]) -> None:
@@ -778,16 +862,16 @@ def status_page(view: dict, meta: dict, status: str, title: str, subtitle: str) 
     rows = [r for r in view["rows"] if r.stock_status == status]
     tone = STATUS_TONE[status]
 
+    total = view["scope"]["positions"]
     st.markdown(
-        f"<div class='ii-card'><h3>{esc(tone['labelMn'])}</h3>"
-        f"<p class='hint'>Нийт <b>{len(rows):,}</b> байрлал — шүүсэн хамрах хүрээнд "
-        f"{view['scope']['positions']:,} байрлалын "
-        f"{share(len(rows) / view['scope']['positions'] if view['scope']['positions'] else None)}"
-        f"</p></div>",
+        f"<div class='ii-card' style='margin-bottom:.4rem'>"
+        f"<h3>{status_badge(status)} &nbsp;{len(rows):,} байрлал</h3>"
+        f"<p class='hint' style='margin-bottom:0'>Шүүсэн хамрах хүрээний "
+        f"{total:,} байрлалын {share(len(rows) / total if total else None)}</p></div>",
         unsafe_allow_html=True,
     )
     if not rows:
-        st.info("Энэ төлөвт тохирох байрлал алга.")
+        empty_state("Энэ төлөвт тохирох байрлал алга.")
         return
     st.dataframe(inventory_table(rows), hide_index=True,
                  use_container_width=True, height=520)
@@ -1087,14 +1171,10 @@ def page_risk(view: dict, meta: dict) -> None:
               "CRITICAL болон HIGH ач холбогдолтой байрлал", view, meta)
     rows = view["risk_rows"]
     if not rows:
-        st.info("Эрсдэлтэй мөр илрээгүй.")
+        empty_state("Эрсдэлтэй мөр илрээгүй.")
         return
-    st.markdown(
-        f"<div class='ii-card'><h3>TOP эрсдэлтэй SKU</h3>"
-        f"<p class='hint'>Нийт <b>{len(rows):,}</b> мөр — ач холбогдлын "
-        f"дарааллаар</p></div>",
-        unsafe_allow_html=True,
-    )
+    panel_open("Эрсдэлтэй байрлалууд",
+               f"Нийт {len(rows):,} мөр — ач холбогдлын дарааллаар")
     st.dataframe(
         pd.DataFrame([{
             "Ач холбогдол": r["priority"],
@@ -1141,14 +1221,12 @@ def page_abc_analysis(view: dict, data: dict, meta: dict) -> None:
 
     left, right = st.columns(2)
     with left:
-        st.markdown("<div class='ii-card'><h3>ABC хуваарилалт</h3></div>",
-                    unsafe_allow_html=True)
+        panel_open("ABC хуваарилалт", "Борлуулалтын өртгийн дүнгээр")
         df = (pd.DataFrame([{"ABC": r.abc, "Дүн": r.sales_value} for r in rows])
               .groupby("ABC", as_index=False).agg(SKU=("Дүн", "size"), Дүн=("Дүн", "sum")))
         st.bar_chart(df.set_index("ABC")["Дүн"], height=220, color="#4f46e5")
     with right:
-        st.markdown("<div class='ii-card'><h3>XYZ хуваарилалт</h3></div>",
-                    unsafe_allow_html=True)
+        panel_open("XYZ хуваарилалт", "Сарын хэлбэлзлийн коэффициентээр")
         df = (pd.DataFrame([{"XYZ": r.xyz, "Дүн": r.sales_value} for r in rows])
               .groupby("XYZ", as_index=False).agg(SKU=("Дүн", "size"), Дүн=("Дүн", "sum")))
         st.bar_chart(df.set_index("XYZ")["SKU"], height=220, color="#4f46e5")
@@ -1176,14 +1254,13 @@ def page_purchase(view: dict, meta: dict) -> None:
               "Шилжүүлгээр хаагдаагүй дутагдалд л шинэ худалдан авалт", view, meta)
     rows = [r for r in view["rows"] if r.new_purchase_qty > 0]
     if not rows:
-        st.info("Худалдан авалтын шаардлага илрээгүй.")
+        empty_state("Худалдан авалтын шаардлага илрээгүй.")
         return
-    st.markdown(
-        f"<div class='ii-card'><h3>Санал</h3><p class='hint'>"
-        f"<b>{len(rows):,}</b> байрлал · нийт "
-        f"<b>{sum(r.new_purchase_qty for r in rows):,}</b> ширхэг. "
-        f"Тоо нь бүхэл тоо руу дээш дугуйрна.</p></div>",
-        unsafe_allow_html=True,
+    panel_open(
+        "Дахин татан авах санал",
+        f"{len(rows):,} байрлал · нийт "
+        f"{sum(r.new_purchase_qty for r in rows):,} ширхэг · "
+        f"тоо нь бүхэл тоо руу дээш дугуйрна",
     )
     st.dataframe(
         pd.DataFrame([{
@@ -1207,7 +1284,7 @@ def page_transfers(view: dict, meta: dict) -> None:
               view, meta)
     transfers = view["transfers"]
     if not transfers:
-        st.info("Шилжүүлэх боломж илрээгүй — дутагдлыг нөхөх илүүдэл алга.")
+        empty_state("Шилжүүлэх боломж илрээгүй — дутагдлыг нөхөх илүүдэл алга.")
         return
 
     tiers = view["transfer_tiers"]
@@ -1253,7 +1330,7 @@ def page_price(view: dict, meta: dict) -> None:
         unsafe_allow_html=True,
     )
     if not benchmarks:
-        st.info("Үнэ жишихэд хангалттай худалдан авалтын өгөгдөл алга.")
+        empty_state("Үнэ жишихэд хангалттай худалдан авалтын өгөгдөл алга.")
         return
 
     risk_codes = view["margin_risk_codes"]
@@ -1292,8 +1369,7 @@ def page_price(view: dict, meta: dict) -> None:
     )
 
     if risk_codes:
-        st.markdown("<div class='ii-card'><h3>Ашгийн эрсдэлтэй бүтээгдэхүүн</h3></div>",
-                    unsafe_allow_html=True)
+        panel_open("Ашгийн эрсдэлтэй бүтээгдэхүүн")
         reasons = view["margin_risk_reasons"]
         st.dataframe(
             pd.DataFrame([{
@@ -1311,7 +1387,7 @@ def page_ai(view: dict, meta: dict) -> None:
               view, meta)
     recs = view["recommendations"]
     if not recs:
-        st.info("Зөвлөмж алга.")
+        empty_state("Зөвлөмж алга.")
         return
 
     counts = pd.Series([r["priority"] for r in recs]).value_counts()
@@ -1373,13 +1449,12 @@ def page_quality(view: dict, meta: dict) -> None:
     if issues:
         st.dataframe(pd.DataFrame(issues), hide_index=True, use_container_width=True)
     else:
-        st.success("Тэмдэглэх алдаа илрээгүй.")
+        empty_state("✓ Тэмдэглэх алдаа илрээгүй.")
 
-    st.markdown("<div class='ii-card'><h3>Хөдөлгөөнгүй нөөц</h3></div>",
-                unsafe_allow_html=True)
+    panel_open("Хөдөлгөөнгүй нөөц")
     stagnant = view["stagnant_rows"]
     if not stagnant:
-        st.info("Хөдөлгөөнгүй нөөц илрээгүй.")
+        empty_state("Хөдөлгөөнгүй нөөц илрээгүй.")
         return
     st.dataframe(
         pd.DataFrame([{
@@ -1623,18 +1698,7 @@ PAGES = [item for _, items in NAV for item in items]
 # Үндсэн урсгал
 # ─────────────────────────────────────────────────────────────────────
 
-_head_logo = logo_data_uri()
-st.markdown(
-    "<div class='ii-head'>"
-    + (f"<img src='{_head_logo}' alt='{esc(ORG_NAME)}' "
-       "style='height:30px;width:auto'>"
-       if _head_logo else "<span class='ii-logo'>📦</span>")
-    + "<span><span class='ii-brand'>INVENTORY</span><br>"
-      f"<span class='ii-brand-sub'>{esc(ORG_NAME)} · Decision Support System</span>"
-      "</span>"
-      "</div>",
-    unsafe_allow_html=True,
-)
+# ⚠️ Толгойн лого нь хажуугийн навигацид шилжсэн тул энд давхардуулахгүй.
 
 # ── 🔐 НЭВТРЭЛТИЙН ХААЛТ ──
 # ⚠️ Үүнээс доош ямар ч өгөгдөл уншигдахгүй, зурагдахгүй.
@@ -1701,7 +1765,10 @@ except Exception as exc:  # noqa: BLE001 — хэрэглэгчид шалтга
 meta = data["meta"]
 options = filter_options(data)
 
-# ── Шүүлтүүрийн мөр ──
+# ── Шүүлтүүрийн зурвас ──
+st.markdown(
+    "<div class='ii-filterlab'>Шүүлтүүр</div>", unsafe_allow_html=True
+)
 bar = st.columns([1.5, 1.2, 1.0, 1.0, 1.3, 1.0])
 
 product_name_by_code = {p["code"]: p["name"] for p in options["products"]}
@@ -1759,12 +1826,12 @@ with bar[4]:
 with bar[5]:
     if not user.role.can_export:
         # ⚠️ Зөвхөн нуухгүй — өгөгдлийг ОГТ бэлдэхгүй
-        st.button("⬇️ Excel татах", disabled=True, use_container_width=True,
+        st.button("Excel тайлан", disabled=True, use_container_width=True,
                   help=f"«{user.role.label_mn}» эрхээр Excel татах боломжгүй")
     else:
         try:
             st.download_button(
-                "⬇️ Excel татах",
+                "Excel тайлан",
                 data=build_excel(file_bytes, uploaded.name),
                 file_name=f"inventory-report-{meta['calculationMonth']}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
