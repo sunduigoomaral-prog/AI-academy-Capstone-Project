@@ -528,7 +528,79 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   font-size: .68rem; color: var(--muted); line-height: 1.6;
   border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s4);
 }
-.ii-auth-page section[data-testid="stSidebar"] { display: none !important; }
+
+/* ══ ФАЙЛ ОРУУЛАХ ════════════════════════════════════════════ */
+.up-hero { max-width: 54rem; margin: var(--s5) auto var(--s4); text-align: center; }
+.up-hero h1 {
+  font-size: 1.85rem; font-weight: 700; color: var(--ink);
+  margin: 0 0 .5rem; letter-spacing: -.025em; line-height: 1.25;
+}
+.up-hero p.lede {
+  font-size: .88rem; color: var(--muted); margin: 0 auto var(--s5);
+  max-width: 44ch; line-height: 1.6;
+}
+.up-steps {
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--s5); flex-wrap: wrap; margin-bottom: var(--s5);
+}
+.up-step { display: flex; align-items: center; gap: var(--s2); }
+.up-step .n {
+  width: 1.55rem; height: 1.55rem; border-radius: 50%;
+  border: 1.5px solid var(--line); color: var(--muted);
+  font-size: .72rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.up-step.on .n { background: var(--brand); border-color: var(--brand); color: #fff; }
+.up-step .t {
+  font-size: .66rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.up-step.on .t { color: var(--brand); }
+
+/* Streamlit-ийн уншуулагчийг том буулгах бүс болгох */
+.up-zone div[data-testid="stFileUploader"] > section,
+.up-zone div[data-testid="stFileUploaderDropzone"] {
+  border: 2px dashed var(--brand-100) !important;
+  border-radius: var(--r-lg) !important;
+  background: var(--surface) !important;
+  padding: var(--s6) var(--s4) !important;
+  min-height: 12rem;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: border-color .15s ease, background .15s ease;
+}
+.up-zone div[data-testid="stFileUploader"] > section:hover,
+.up-zone div[data-testid="stFileUploaderDropzone"]:hover {
+  border-color: var(--brand) !important; background: var(--brand-50) !important;
+}
+.up-zone div[data-testid="stFileUploader"] label { display: none !important; }
+.up-zone div[data-testid="stFileUploader"] small { color: var(--muted) !important; }
+.up-zone div[data-testid="stFileUploader"] button {
+  background: var(--surface) !important; border: 1px solid var(--line) !important;
+  color: var(--ink-2) !important; border-radius: var(--r) !important;
+  font-weight: 600 !important;
+}
+.up-zone div[data-testid="stFileUploader"] button:hover {
+  border-color: var(--brand) !important; color: var(--brand) !important;
+}
+.up-note {
+  max-width: 54rem; margin: 0 auto; text-align: center;
+  font-size: .72rem; color: var(--muted); margin-top: var(--s3); line-height: 1.65;
+}
+.up-cols {
+  max-width: 54rem; margin: var(--s4) auto 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--s2);
+}
+.up-col {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); padding: .7rem .85rem; text-align: left;
+}
+.up-col .h {
+  font-size: .68rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--brand); margin-bottom: .25rem;
+}
+.up-col .d { font-size: .72rem; color: var(--muted); line-height: 1.55; }
 
 /* ══ ШҮҮЛТҮҮРИЙН ЗУРВАС ═══════════════════════════════════════ */
 .ii-filterbar {
@@ -585,6 +657,44 @@ hr { border-color: var(--line); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+</style>
+"""
+
+#: Нэвтэрсэн үед — цэс ҮРГЭЛЖ нээлттэй, хумих товчгүй
+SIDEBAR_PINNED = """
+<style>
+  [data-testid="stSidebarCollapseButton"],
+  [data-testid="collapsedControl"],
+  button[data-testid="baseButton-headerNoPadding"],
+  section[data-testid="stSidebar"] button[kind="header"] {
+    display: none !important;
+  }
+  section[data-testid="stSidebar"],
+  section[data-testid="stSidebar"][aria-expanded="false"] {
+    transform: none !important;
+    visibility: visible !important;
+    margin-left: 0 !important;
+    min-width: 15.5rem !important;
+    max-width: 15.5rem !important;
+  }
+  @media (max-width: 820px) {
+    /* Нарийн дэлгэцэд жирийн зан төлөв — цэс дэлгэцийг эзлэхгүй */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] { display: block !important; }
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+      min-width: 0 !important; max-width: 100% !important;
+    }
+  }
+</style>
+"""
+
+#: Нэвтрээгүй үед — цэс огт харагдахгүй (агуулгагүй тул)
+SIDEBAR_HIDDEN = """
+<style>
+  section[data-testid="stSidebar"],
+  [data-testid="stSidebarCollapseButton"],
+  [data-testid="collapsedControl"] { display: none !important; }
 </style>
 """
 
@@ -1703,21 +1813,27 @@ PAGES = [item for _, items in NAV for item in items]
 # ── 🔐 НЭВТРЭЛТИЙН ХААЛТ ──
 # ⚠️ Үүнээс доош ямар ч өгөгдөл уншигдахгүй, зурагдахгүй.
 if not is_configured():
+    st.markdown(SIDEBAR_HIDDEN, unsafe_allow_html=True)
     render_setup_screen()
     st.stop()
 
 try:
     load_users()            # тохиргоо эвдэрсэн бол ЭНД илэрнэ
 except AuthError as exc:
+    st.markdown(SIDEBAR_HIDDEN, unsafe_allow_html=True)
     st.error(f"Нэвтрэлтийн тохиргоо буруу: {exc}")
     st.stop()
 
 user = current_user()
 if user is None:
+    st.markdown(SIDEBAR_HIDDEN, unsafe_allow_html=True)
     if "attempts" not in st.session_state:
         st.session_state["attempts"] = Attempts()
     render_login_screen(st.session_state["attempts"])
     st.stop()
+
+# ⭐ Энэ цэгээс цааш хэрэглэгч нэвтэрсэн — цэс тогтмол нээлттэй
+st.markdown(SIDEBAR_PINNED, unsafe_allow_html=True)
 
 # ⚠️ Эрх нь өөрчлөгдсөн байж болно — сонгосон хуудас зөвшөөрөгдөж байгаа эсэхийг
 #    өгөгдөл уншихаас ӨМНӨ шалгана.
@@ -1736,22 +1852,59 @@ with st.sidebar:
 
     render_user_box(user)
 
-    st.markdown("<div class='ii-navhead'>Өгөгдөл</div>", unsafe_allow_html=True)
-    uploaded = st.file_uploader("Excel", type=["xlsx", "xlsm"],
-                                label_visibility="collapsed")
+# ⚠️ Уншуулагч ҮНДСЭН талбарт — хажуугийн цэс хаагдсан ч харагдана.
+#    Ганц widget, ганц түлхүүр; байрлал нь л өөрчлөгдөнө.
+_has_file = st.session_state.get("excel_file") is not None
 
-if uploaded is None:
+
+def _upload_widget():
+    return st.file_uploader(
+        "Excel файл", type=["xlsx", "xlsm"],
+        key="excel_file", label_visibility="collapsed",
+        help="Sales · Purchase · Stock хуудас агуулсан файл",
+    )
+
+
+if not _has_file:
     st.markdown(
-        "<div class='ii-card'><h3>Excel файлаа оруулна уу</h3>"
-        "<p class='hint'>Зүүн талын хэсгээс Sales · Purchase · Stock агуулсан "
-        "файлаа сонгоно. Sheet-үүд нэрээр биш, <b>бүтцээр</b> танигдана.<br><br>"
-        "Систем дараах шинжилгээг автоматаар гүйцэтгэнэ: ABC–XYZ ангилал · "
-        "нөөцийн оновчлол · нөөцийн тэнцвэр · шилжүүлэх ба худалдан авах санал · "
-        "худалдан авах үнийн хяналт · ашгийн эрсдэл · AI шийдвэрийн зөвлөмж."
-        "</p></div>",
+        "<div class='up-hero'>"
+        "<h1>Excel файлаа оруулна уу</h1>"
+        "<p class='lede'>Багана автоматаар танигдаж, өгөгдөл шалгагдан, "
+        "удирдлагын түвшний шинжилгээ хэдхэн секундэд бэлэн болно.</p>"
+        "<div class='up-steps'>"
+        "<span class='up-step on'><span class='n'>1</span>"
+        "<span class='t'>Оруулах</span></span>"
+        "<span class='up-step'><span class='n'>2</span>"
+        "<span class='t'>Шалгах</span></span>"
+        "<span class='up-step'><span class='n'>3</span>"
+        "<span class='t'>Шинжлэх</span></span>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+    zone = st.columns([1, 6, 1])[1]
+    with zone:
+        st.markdown("<div class='up-zone'>", unsafe_allow_html=True)
+        uploaded = _upload_widget()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        "<div class='up-note'>Дэмжигдэх формат: <b>.xlsx · .xlsm</b> — "
+        "sheet-үүд нэрээр биш, <b>бүтцээр нь</b> танигдана.</div>"
+        "<div class='up-cols'>"
+        "<div class='up-col'><div class='h'>Sales</div>"
+        "<div class='d'>Бүтээгдэхүүн · байршил · сар · тоо хэмжээ · өртөг</div></div>"
+        "<div class='up-col'><div class='h'>Purchase</div>"
+        "<div class='d'>Нийлүүлэгч · сар · тоо хэмжээ · дүн</div></div>"
+        "<div class='up-col'><div class='h'>Stock</div>"
+        "<div class='d'>Бүтээгдэхүүн · байршил · үлдэгдэл · үнэ дүн</div></div>"
+        "</div>",
         unsafe_allow_html=True,
     )
     st.stop()
+
+# Энэ цэгт файл заавал байна — өмнөх ачаалалд уншуулсан.
+uploaded = st.session_state["excel_file"]
 
 file_bytes = uploaded.getvalue()
 
@@ -1764,6 +1917,9 @@ except Exception as exc:  # noqa: BLE001 — хэрэглэгчид шалтга
 
 meta = data["meta"]
 options = filter_options(data)
+
+with st.expander(f"📄 {uploaded.name} — өөр файл оруулах"):
+    _upload_widget()
 
 # ── Шүүлтүүрийн зурвас ──
 st.markdown(
