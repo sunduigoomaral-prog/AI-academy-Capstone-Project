@@ -629,12 +629,18 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   border-radius: var(--r-lg); padding: .6rem .8rem .2rem;
   box-shadow: var(--shadow); margin-bottom: var(--s3);
 }
-.ii-filterlab {
-  display: block;
-  font-size: .58rem; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--muted);
-  /* ⚠️ Тодорхой line-height + зай — эс бөгөөс дээрх элемент дарж таллана */
-  line-height: 1.5; padding: .15rem 0 .1rem; margin: 0;
+/* Шүүлтүүрийн савны шошго — st.caption-ыг загварчилна */
+div[data-testid="stVerticalBlockBorderWrapper"] div[data-testid="stCaptionContainer"] p,
+div[data-testid="stVerticalBlockBorderWrapper"] .stCaption p {
+  font-size: .62rem !important; font-weight: 700 !important;
+  letter-spacing: .12em; color: var(--muted) !important;
+  margin: 0 0 .1rem !important; line-height: 1.6;
+}
+/* Хүрээтэй сав — шүүлтүүрийн зурвас */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+  border-radius: var(--r-lg) !important;
+  border-color: var(--line) !important;
+  background: var(--surface);
 }
 /* Файлын мөр — нимгэн */
 div[data-testid="stExpander"] { border: none !important; margin-bottom: .3rem; }
@@ -2037,10 +2043,12 @@ with st.expander(f"📄 {uploaded.name} — өөр файл оруулах"):
     _upload_widget()
 
 # ── Шүүлтүүрийн зурвас ──
-st.markdown(
-    "<div class='ii-filterlab'>Шүүлтүүр</div>", unsafe_allow_html=True
-)
-bar = st.columns([1.5, 1.2, 1.0, 1.0, 1.3, 1.0])
+# ⚠️ Шошгыг ЧӨЛӨӨТ markdown-аар тавихад дээрх элемент дарж таллаа
+#    тасалж байсан. Streamlit-ийн жинхэнэ сав ашиглавал байрлалыг
+#    өөрөө зөв тооцно — CSS-ийн заль хэрэггүй.
+with st.container(border=True):
+    st.caption("ШҮҮЛТҮҮР")
+    bar = st.columns([1.5, 1.2, 1.0, 1.0, 1.3, 1.0])
 
 product_name_by_code = {p["code"]: p["name"] for p in options["products"]}
 
