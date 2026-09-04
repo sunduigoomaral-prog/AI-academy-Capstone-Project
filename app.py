@@ -17,6 +17,7 @@ INVENTORY INTELLIGENCE & DECISION SUPPORT SYSTEM — Streamlit UI.
 from __future__ import annotations
 
 import base64
+import hashlib
 import html
 import os
 import sys
@@ -134,7 +135,7 @@ html, body, [class*="css"], .stApp, button, input, select, textarea {
 
 .stApp { background: var(--canvas); color: var(--ink); }
 .block-container {
-  padding: var(--s4) var(--s5) var(--s6) !important;
+  padding: .55rem 1.3rem 2rem !important;
   max-width: 100% !important;
 }
 #MainMenu, footer, header[data-testid="stHeader"] { display: none !important; }
@@ -211,14 +212,17 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"] {
 
 /* ══ ХУУДАСНЫ ТОЛГОЙ ═════════════════════════════════════════ */
 .ii-topbar {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: var(--s4); flex-wrap: wrap; margin-bottom: var(--s3);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s4); flex-wrap: wrap; margin: 0 0 .55rem;
 }
+.ii-topbar > div:first-child { flex: 1 1 18rem; min-width: 0; }
 .ii-topbar h1 {
-  font-size: 1.4rem; font-weight: 700; color: var(--ink);
-  margin: 0; letter-spacing: -.015em;
+  font-size: 1.22rem; font-weight: 700; color: var(--ink);
+  margin: 0; letter-spacing: -.015em; line-height: 1.25;
 }
-.ii-topbar .sub { font-size: .8rem; color: var(--muted); margin: .15rem 0 0; }
+.ii-topbar .sub {
+  font-size: .74rem; color: var(--muted); margin: .1rem 0 0; line-height: 1.4;
+}
 .ii-pills, .ii-chips { display: flex; gap: var(--s1); flex-wrap: wrap; }
 .ii-pill, .ii-chip {
   background: var(--surface); border: 1px solid var(--line);
@@ -232,8 +236,8 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"] {
 /* ══ КАРТ / ПАНЕЛ ════════════════════════════════════════════ */
 .ii-card, .sm-panel {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-lg); padding: var(--s4) var(--s4);
-  box-shadow: var(--shadow); margin-bottom: var(--s3);
+  border-radius: var(--r-lg); padding: .8rem .9rem;
+  box-shadow: var(--shadow); margin-bottom: .55rem;
 }
 .sm-panel { height: 100%; margin-bottom: 0; }
 .ii-card h3, .sm-panel h3 {
@@ -244,6 +248,16 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"] {
   font-size: .72rem; color: var(--muted); margin: .15rem 0 var(--s3);
 }
 .ii-card p.hint:last-child, .sm-panel .hint:last-child { margin-bottom: 0; }
+
+/* Нимгэн хэсгийн толгой — зузаан картын оронд */
+.ii-sechead {
+  display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
+  margin: .2rem 0 .45rem;
+}
+.ii-sechead h3 {
+  font-size: .95rem; font-weight: 700; color: var(--ink); margin: 0;
+}
+.ii-sechead .meta { font-size: .72rem; color: var(--muted); }
 
 /* ══ KPI ═════════════════════════════════════════════════════ */
 .sm-kpis {
@@ -529,6 +543,13 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s4);
 }
 
+/* ══ ХУУДАСЛАЛТ ══════════════════════════════════════════════ */
+.pg-info {
+  font-size: .74rem; color: var(--muted); line-height: 2.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.pg-info b { color: var(--ink); }
+
 /* ══ ФАЙЛ ОРУУЛАХ ════════════════════════════════════════════ */
 .up-hero { max-width: 54rem; margin: var(--s5) auto var(--s4); text-align: center; }
 .up-hero h1 {
@@ -609,9 +630,18 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   box-shadow: var(--shadow); margin-bottom: var(--s3);
 }
 .ii-filterlab {
-  font-size: .58rem; font-weight: 700; letter-spacing: .11em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: .2rem;
+  font-size: .55rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); margin: 0 0 .1rem;
 }
+/* Файлын мөр — нимгэн */
+div[data-testid="stExpander"] { border: none !important; margin-bottom: .3rem; }
+div[data-testid="stExpander"] details {
+  border: 1px solid var(--line) !important; border-radius: var(--r) !important;
+  background: var(--surface) !important;
+}
+div[data-testid="stExpander"] summary { padding: .3rem .7rem !important; font-size: .76rem; }
+/* Мэдэгдэл — нимгэн */
+.ii-note, .ii-warn { padding: .4rem .7rem; margin-bottom: .5rem; font-size: .72rem; }
 
 /* ══ STREAMLIT УДИРДЛАГА ═════════════════════════════════════ */
 div[data-testid="stSelectbox"] label,
@@ -652,6 +682,9 @@ div[data-testid="stForm"] { border: none; padding: 0; }
 
 /* Мөрийн хоорондын зайг жигдрүүлэх */
 div[data-testid="stVerticalBlock"] > div:empty { display: none; }
+div[data-testid="stVerticalBlock"] { gap: .45rem !important; }
+div[data-testid="stHorizontalBlock"] { gap: .5rem !important; }
+div[data-testid="stElementContainer"] { margin: 0 !important; }
 hr { border-color: var(--line); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -791,21 +824,49 @@ def brand_logo(height_px: int = 42) -> str:
 # Өгөгдөл (кэшлэнэ — collect ~7 сек)
 # ─────────────────────────────────────────────────────────────────────
 
+#: Түр файлын байршил
+TMP_DIR = Path(tempfile.gettempdir()) / "inventory_dss"
+
+
+def _digest(file_bytes: bytes) -> str:
+    """Агуулгын богино хураангуй — файлын нэрийг өвөрмөц болгоно."""
+    return hashlib.sha256(file_bytes).hexdigest()[:16]
+
+
+def _write_atomic(path: Path, write) -> Path:
+    """⚠️ Процесс тус бүрийн түр нэр рүү бичээд АТОМААР солино.
+
+    Хэрэв шууд эцсийн нэр рүү бичвэл өөр процесс хагас бичигдсэн
+    файлыг уншиж эвдэрсэн Excel гаргана.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    staging = path.with_name(f"{path.stem}.{os.getpid()}.part{path.suffix}")
+    try:
+        write(staging)
+        os.replace(staging, path)
+    finally:
+        if staging.exists():
+            staging.unlink(missing_ok=True)
+    return path
+
+
 @st.cache_data(show_spinner=False)
 def run_analysis(file_bytes: bytes, file_name: str) -> dict:
-    tmp_dir = Path(tempfile.gettempdir()) / "inventory_dss"
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-    tmp_path = tmp_dir / file_name
-    tmp_path.write_bytes(file_bytes)
-    return collect(tmp_path)
+    # ⚠️ Нэрийг агуулгаар нь өвөрмөц болгоно — ижил нэртэй өөр файл
+    #    оруулсан хоёр хэрэглэгч бие биенийхээ өгөгдлийг дарахгүй.
+    safe = f"{_digest(file_bytes)}_{Path(file_name).name}"
+    src = _write_atomic(TMP_DIR / safe, lambda dst: dst.write_bytes(file_bytes))
+    return collect(src)
 
 
 @st.cache_data(show_spinner=False)
 def build_excel(file_bytes: bytes, file_name: str) -> bytes:
     data = run_analysis(file_bytes, file_name)
-    out_path = Path(tempfile.gettempdir()) / "inventory_dss" / "inventory-report.xlsx"
-    build_workbook(data, out_path)
-    return out_path.read_bytes()
+    out = _write_atomic(
+        TMP_DIR / f"report_{_digest(file_bytes)}.xlsx",
+        lambda dst: build_workbook(data, dst),
+    )
+    return out.read_bytes()
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -842,10 +903,10 @@ def empty_state(text: str) -> None:
 
 
 def panel_open(title: str, hint: str = "") -> None:
-    """Гарчигтай панел нээх (агуулгыг дараа нь st.* -ээр нэмнэ)."""
+    """Хэсгийн нимгэн толгой — гарчиг ба тайлбар НЭГ мөрөнд."""
     st.markdown(
-        f"<div class='ii-card' style='margin-bottom:.4rem'><h3>{esc(title)}</h3>"
-        + (f"<p class='hint' style='margin-bottom:0'>{esc(hint)}</p>" if hint else "")
+        f"<div class='ii-sechead'><h3>{esc(title)}</h3>"
+        + (f"<span class='meta'>{esc(hint)}</span>" if hint else "")
         + "</div>",
         unsafe_allow_html=True,
     )
@@ -967,6 +1028,49 @@ def inventory_table(rows: list) -> pd.DataFrame:
     } for r in rows])
 
 
+#: Нэг хуудсанд харуулах мөрийн сонголт
+PAGE_SIZES = [15, 25, 50, 100, 250]
+
+
+def paged_table(df: pd.DataFrame, key: str, *, default_size: int = 15) -> None:
+    """Хүснэгтийг хуудаслаж харуулна — урт гүйлгээний оронд 1 / 2 / 3 …
+
+    ⚠️ Зөвхөн ХАРУУЛАХ зүсэлт. Нийт мөрийн тоо бүтнээрээ харагдана.
+    """
+    total = len(df)
+    if total == 0:
+        empty_state("Мөр алга.")
+        return
+
+    c_size, c_page, c_info = st.columns([1.1, 1.3, 4.6])
+
+    size = c_size.selectbox(
+        "Мөр", PAGE_SIZES,
+        index=PAGE_SIZES.index(default_size),
+        key=f"pg_{key}_size", label_visibility="collapsed",
+        format_func=lambda n: f"{n} мөр",
+    )
+
+    pages = max(1, -(-total // size))       # дээш дугуйрсан хуваалт
+    page = c_page.selectbox(
+        "Хуудас", list(range(1, pages + 1)),
+        key=f"pg_{key}_page", label_visibility="collapsed",
+        format_func=lambda i: f"{i} / {pages}",
+    )
+
+    start = (page - 1) * size
+    end = min(start + size, total)
+    c_info.markdown(
+        f"<div class='pg-info'>{start + 1:,}–{end:,} / <b>{total:,}</b> мөр</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.dataframe(
+        df.iloc[start:end], hide_index=True, use_container_width=True,
+        height=min(640, 45 + size * 35),
+    )
+
+
 def status_page(view: dict, meta: dict, status: str, title: str, subtitle: str) -> None:
     page_head(title, subtitle, view, meta)
     rows = [r for r in view["rows"] if r.stock_status == status]
@@ -974,17 +1078,18 @@ def status_page(view: dict, meta: dict, status: str, title: str, subtitle: str) 
 
     total = view["scope"]["positions"]
     st.markdown(
-        f"<div class='ii-card' style='margin-bottom:.4rem'>"
-        f"<h3>{status_badge(status)} &nbsp;{len(rows):,} байрлал</h3>"
-        f"<p class='hint' style='margin-bottom:0'>Шүүсэн хамрах хүрээний "
-        f"{total:,} байрлалын {share(len(rows) / total if total else None)}</p></div>",
+        f"<div class='ii-sechead'><h3>{status_badge(status)}</h3>"
+        f"<span class='meta'><b>{len(rows):,}</b> байрлал · нийт {total:,}-ийн "
+        f"{share(len(rows) / total if total else None)}</span></div>",
         unsafe_allow_html=True,
     )
     if not rows:
         empty_state("Энэ төлөвт тохирох байрлал алга.")
         return
-    st.dataframe(inventory_table(rows), hide_index=True,
-                 use_container_width=True, height=520)
+    paged_table(
+        inventory_table(rows),
+        f"status_{status}",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1272,8 +1377,10 @@ def page_inventory_overview(view: dict, meta: dict) -> None:
     page_head("Нөөцийн ерөнхий байдал",
               "Байрлал тус бүрийн баланс, төлөв ба шийдвэр", view, meta)
     render_kpi_grid(view["kpis"][:7])
-    st.dataframe(inventory_table(view["rows"]), hide_index=True,
-                 use_container_width=True, height=560)
+    paged_table(
+        inventory_table(view["rows"]),
+        "inventory_overview",
+    )
 
 
 def page_risk(view: dict, meta: dict) -> None:
@@ -1285,7 +1392,7 @@ def page_risk(view: dict, meta: dict) -> None:
         return
     panel_open("Эрсдэлтэй байрлалууд",
                f"Нийт {len(rows):,} мөр — ач холбогдлын дарааллаар")
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Ач холбогдол": r["priority"],
             "Код": r["productCode"],
@@ -1300,14 +1407,14 @@ def page_risk(view: dict, meta: dict) -> None:
             "Эрсдэл": r["risk"],
             "Арга хэмжээ": r["action"],
         } for r in rows]),
-        hide_index=True, use_container_width=True, height=560,
+        "risk",
     )
 
 
 def page_matrix(view: dict, meta: dict) -> None:
     page_head("ABCXYZ матриц", "9 хосолсон ангиллын дэлгэрэнгүй", view, meta)
     render_matrix(view["matrix"])
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Хос": c["abcXyz"],
             "SKU": c["skuCount"],
@@ -1318,7 +1425,7 @@ def page_matrix(view: dict, meta: dict) -> None:
             "Зохистой нөөц": round(c["recommendedStock"]),
             "Эрсдэлтэй байрлал": c["riskCount"],
         } for c in view["matrix"]]),
-        hide_index=True, use_container_width=True,
+        "matrix",
     )
 
 
@@ -1341,7 +1448,7 @@ def page_abc_analysis(view: dict, data: dict, meta: dict) -> None:
               .groupby("XYZ", as_index=False).agg(SKU=("Дүн", "size"), Дүн=("Дүн", "sum")))
         st.bar_chart(df.set_index("XYZ")["SKU"], height=220, color="#4f46e5")
 
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Зэрэглэл": r.rank,
             "Код": r.product_code,
@@ -1355,7 +1462,7 @@ def page_abc_analysis(view: dict, data: dict, meta: dict) -> None:
             "CV": NOT_AVAILABLE if r.cv is None else round(r.cv, 3),
             "Борлуулалттай сар": r.months_with_sales,
         } for r in rows]),
-        hide_index=True, use_container_width=True, height=520,
+        "abc_analysis",
     )
 
 
@@ -1372,7 +1479,7 @@ def page_purchase(view: dict, meta: dict) -> None:
         f"{sum(r.new_purchase_qty for r in rows):,} ширхэг · "
         f"тоо нь бүхэл тоо руу дээш дугуйрна",
     )
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Код": r.position.product_code,
             "Нэр": r.position.product_name or NOT_AVAILABLE,
@@ -1384,7 +1491,7 @@ def page_purchase(view: dict, meta: dict) -> None:
             "Худалдан авах": r.new_purchase_qty,
             "Шийдвэр": DECISION_TONE[r.decision]["labelMn"],
         } for r in rows]),
-        hide_index=True, use_container_width=True, height=520,
+        "purchase",
     )
 
 
@@ -1413,7 +1520,7 @@ def page_transfers(view: dict, meta: dict) -> None:
     )
     st.markdown(f"<div class='ii-kpis'>{''.join(cards)}</div>", unsafe_allow_html=True)
 
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Код": t.product_code,
             "Нэр": view["name_by_code"].get(t.product_code) or NOT_AVAILABLE,
@@ -1424,7 +1531,7 @@ def page_transfers(view: dict, meta: dict) -> None:
             "Шат": t.tier_label_mn,
             "Шалтгаан": t.reason_mn,
         } for t in transfers]),
-        hide_index=True, use_container_width=True, height=520,
+        "transfers",
     )
 
 
@@ -1460,7 +1567,7 @@ def page_price(view: dict, meta: dict) -> None:
         unsafe_allow_html=True,
     )
 
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Эрсдэл": "⚠️" if b.product_code in risk_codes else "",
             "Код": b.product_code,
@@ -1475,19 +1582,19 @@ def page_price(view: dict, meta: dict) -> None:
             "Боломжит хэмнэлт": b.potential_saving,
             "Хамгийн хямд эх сурвалж": b.min_source_key or NOT_AVAILABLE,
         } for b in benchmarks]),
-        hide_index=True, use_container_width=True, height=480,
+        "price",
     )
 
     if risk_codes:
         panel_open("Ашгийн эрсдэлтэй бүтээгдэхүүн")
         reasons = view["margin_risk_reasons"]
-        st.dataframe(
+        paged_table(
             pd.DataFrame([{
                 "Код": code,
                 "Нэр": view["name_by_code"].get(code) or NOT_AVAILABLE,
                 "Шалтгаан": " · ".join(reasons.get(code, [])) or NOT_AVAILABLE,
             } for code in sorted(risk_codes)]),
-            hide_index=True, use_container_width=True,
+            "price2",
         )
 
 
@@ -1516,7 +1623,7 @@ def page_ai(view: dict, meta: dict) -> None:
                             default=["CRITICAL", "HIGH"])
     shown = [r for r in recs if r["priority"] in picked] if picked else recs
 
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Ач холбогдол": r["priority"],
             "Код": r["product_code"],
@@ -1530,7 +1637,7 @@ def page_ai(view: dict, meta: dict) -> None:
             "Тоо": r["recommended_quantity"] or NOT_AVAILABLE,
             "Дүрэм": r["rule_code"],
         } for r in shown]),
-        hide_index=True, use_container_width=True, height=520,
+        "ai",
     )
 
 
@@ -1557,7 +1664,10 @@ def page_quality(view: dict, meta: dict) -> None:
 
     issues = q.get("issues") or []
     if issues:
-        st.dataframe(pd.DataFrame(issues), hide_index=True, use_container_width=True)
+        paged_table(
+            pd.DataFrame(issues),
+            "quality",
+        )
     else:
         empty_state("✓ Тэмдэглэх алдаа илрээгүй.")
 
@@ -1566,7 +1676,7 @@ def page_quality(view: dict, meta: dict) -> None:
     if not stagnant:
         empty_state("Хөдөлгөөнгүй нөөц илрээгүй.")
         return
-    st.dataframe(
+    paged_table(
         pd.DataFrame([{
             "Код": r["productCode"],
             "Нэр": r["productName"] or NOT_AVAILABLE,
@@ -1579,7 +1689,7 @@ def page_quality(view: dict, meta: dict) -> None:
             "Сүүлийн худалдан авалт": r["lastPurchasePeriod"] or NOT_AVAILABLE,
             "Зөвлөмж": r["recommendation"],
         } for r in stagnant]),
-        hide_index=True, use_container_width=True, height=440,
+        "quality2",
     )
 
 
