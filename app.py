@@ -630,8 +630,11 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   box-shadow: var(--shadow); margin-bottom: var(--s3);
 }
 .ii-filterlab {
-  font-size: .55rem; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--muted); margin: 0 0 .1rem;
+  display: block;
+  font-size: .58rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+  /* ⚠️ Тодорхой line-height + зай — эс бөгөөс дээрх элемент дарж таллана */
+  line-height: 1.5; padding: .15rem 0 .1rem; margin: 0;
 }
 /* Файлын мөр — нимгэн */
 div[data-testid="stExpander"] { border: none !important; margin-bottom: .3rem; }
@@ -684,7 +687,9 @@ div[data-testid="stForm"] { border: none; padding: 0; }
 div[data-testid="stVerticalBlock"] > div:empty { display: none; }
 div[data-testid="stVerticalBlock"] { gap: .45rem !important; }
 div[data-testid="stHorizontalBlock"] { gap: .5rem !important; }
-div[data-testid="stElementContainer"] { margin: 0 !important; }
+/* ⚠️ stElementContainer-ийн margin-г тэглэхгүй — зэргэлдээ элементүүд
+   давхцаж, текст дарагдан таллаа тасарч байсан. Зайг vertical block-ийн
+   gap хариуцна. */
 hr { border-color: var(--line); }
 
 @media (prefers-reduced-motion: reduce) {
