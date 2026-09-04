@@ -83,31 +83,31 @@ CSS = """
    Нэг л токен багц: өнгө, зай, радиус, сүүдэр, үсэг.
    ══════════════════════════════════════════════════════════════ */
 :root {
-  /* Гадаргуу */
-  --canvas:    #f5f8f6;
+  /* Гадаргуу — албан ёсны цэнхэр рүү бага зэрэг хазайсан саармаг */
+  --canvas:    #f4f6f9;
   --surface:   #ffffff;
-  --surface-2: #fafcfb;
-  --line:      #e3eae6;
-  --line-2:    #eef3f0;
+  --surface-2: #fafbfd;
+  --line:      #e1e6ee;
+  --line-2:    #edf0f5;
 
-  /* Бэх */
-  --ink:       #14241d;
-  --ink-2:     #3d5449;
-  --muted:     #7b9188;
+  /* Бэх — брэндийн «Шөнийн цэнхэр» #122333 (RGB 18 35 53) */
+  --ink:       #122333;
+  --ink-2:     #3a4d63;
+  --muted:     #74869c;
 
-  /* Брэнд — Монос ногоон */
+  /* Үйлдлийн өнгө — Монос ногоон */
   --brand:     #078b4e;
   --brand-600: #067044;
   --brand-700: #055836;
   --brand-50:  #e9f6ef;
   --brand-100: #cfebdd;
 
-  /* Навигаци — гүн ногоон */
-  --nav:       #0a3527;
-  --nav-2:     #124331;
-  --nav-3:     #1a5540;
-  --nav-ink:   #cfe3d8;
-  --nav-dim:   #7ea795;
+  /* Навигаци — албан ёсны «Шөнийн цэнхэр» ба түүнээс гаргасан шатлал */
+  --nav:       #122333;
+  --nav-2:     #1d3149;
+  --nav-3:     #27405d;
+  --nav-ink:   #c6d5e5;
+  --nav-dim:   #7d92aa;
 
   /* Утга илэрхийлэх өнгө — брэндээс ТУСДАА */
   --danger:    #cf3049;  --danger-bg:  #fdeef1;
@@ -122,7 +122,7 @@ CSS = """
   --s4: 1rem;   --s5: 1.5rem; --s6: 2rem;
 
   --r-sm: 6px; --r: 10px; --r-lg: 14px;
-  --shadow: 0 1px 2px rgba(16,40,30,.04), 0 1px 3px rgba(16,40,30,.03);
+  --shadow: 0 1px 2px rgba(18,35,51,.05), 0 1px 3px rgba(18,35,51,.04);
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
@@ -141,7 +141,7 @@ html, body, [class*="css"], .stApp, button, input, select, textarea {
 #MainMenu, footer, header[data-testid="stHeader"] { display: none !important; }
 
 ::-webkit-scrollbar { width: 9px; height: 9px; }
-::-webkit-scrollbar-thumb { background: #cfdbd5; border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: #ccd6e2; border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* ══ ХАЖУУГИЙН НАВИГАЦИ ══════════════════════════════════════ */
@@ -493,7 +493,7 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   border-radius: 18px; padding: 2.4rem 2.2rem 1.8rem;
   color: #fff; min-height: 30rem;
   display: flex; flex-direction: column; justify-content: space-between;
-  box-shadow: 0 20px 44px -26px rgba(10, 53, 39, .6);
+  box-shadow: 0 20px 44px -26px rgba(18, 35, 51, .55);
 }
 .ii-brandpane .logo {
   margin-bottom: var(--s5); background: #fff; border-radius: var(--r);
@@ -510,16 +510,18 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   margin: 0 0 .5rem; color: #fff; letter-spacing: -.02em;
 }
 .ii-brandpane .lede {
-  font-size: .82rem; line-height: 1.6; color: rgba(255,255,255,.78);
-  margin: 0 0 var(--s5); max-width: 34ch;
+  font-size: .8rem; line-height: 1.65; color: rgba(255,255,255,.78);
+  margin: 0 0 var(--s5); max-width: 46ch;
 }
-.ii-feat { display: flex; gap: var(--s2); align-items: flex-start; margin-bottom: .55rem; }
+.ii-feat { display: flex; gap: var(--s2); align-items: center; margin-bottom: .42rem; }
 .ii-feat .ico {
-  width: 26px; height: 26px; border-radius: var(--r-sm); flex: none;
+  width: 25px; height: 25px; border-radius: var(--r-sm); flex: none;
   background: rgba(255,255,255,.15); display: flex;
-  align-items: center; justify-content: center; font-size: .78rem;
+  align-items: center; justify-content: center; font-size: .75rem;
 }
-.ii-feat .txt { font-size: .76rem; line-height: 1.45; color: rgba(255,255,255,.88); }
+.ii-feat .txt {
+  font-size: .78rem; line-height: 1.4; font-weight: 500; color: rgba(255,255,255,.92);
+}
 .ii-feat .txt b { color: #fff; font-weight: 600; }
 .ii-brandfoot {
   font-size: .64rem; color: rgba(255,255,255,.55);
@@ -1733,10 +1735,12 @@ def page_quality(view: dict, meta: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────
 
 BRAND_FEATURES = [
-    ("📊", "<b>ABC–XYZ шинжилгээ</b> — 9 хосолсон ангиллаар нөөцөө эрэмбэлнэ"),
-    ("⚠️", "<b>Эрсдэлийн эрт сэрэмжлүүлэг</b> — нөөц дуусах, хэт их, хөдөлгөөнгүй"),
-    ("🔁", "<b>Шилжүүлэг ба татан авалт</b> — компани доторхоо эхэлж ашиглана"),
-    ("🤖", "<b>AI шийдвэрийн зөвлөмж</b> — дүрэмд суурилсан, эх өгөгдлөөс"),
+    ("🗂️", "Өгөгдлийг нэгтгэх, боловсруулах"),
+    ("📊", "Бүтээгдэхүүний нөөцийн ангилал хийх"),
+    ("⚖️", "Зохистой нөөцийн түвшинг тооцоолох"),
+    ("⚠️", "Нөөцийн эрсдэлийг урьдчилан илрүүлэх"),
+    ("🔁", "Нөөцийн тэнцвэржилтийг дэмжих"),
+    ("🏷️", "Ашигт ажиллагааны эрсдэлийг хянах"),
 ]
 
 
@@ -1752,8 +1756,10 @@ def render_brand_pane() -> None:
         f"<div>"
         f"<div class='logo'>{brand_logo(44)}</div>"
         f"<h1>Нөөцийн ухаалаг<br>шийдвэр дэмжих систем</h1>"
-        f"<p class='lede'>Борлуулалт, худалдан авалт, үлдэгдлийн өгөгдлийг "
-        f"нэгтгэн шинжилж, аль бараанд юу хийхийг тодорхой хэлнэ.</p>"
+        f"<p class='lede'>Бараа материалын нөөцийн удирдлагын үйл явцыг "
+        f"автоматжуулж, өгөгдлийн шинжилгээ болон хиймэл оюунд суурилсан "
+        f"зөвлөмжөөр шийдвэр гаргалтыг дэмжих замаар нөөцийн эрсдэлийг "
+        f"бууруулж, ажлын бүтээмжийг нэмэгдүүлэх систем.</p>"
         f"{features}"
         f"</div>"
         f"<div class='ii-brandfoot'>{esc(ORG_NAME)} · Inventory Intelligence &amp; "
