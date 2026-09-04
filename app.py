@@ -33,6 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "python"))
 
 from dashboard.view import (  # noqa: E402
     ABC_ORDER,
+    ABC_XYZ_TONE,
     available_periods,
     DECISION_TONE,
     NOT_AVAILABLE,
@@ -45,6 +46,7 @@ from dashboard.view import (  # noqa: E402
     filter_options,
     monthly_sales_series,
     next_period,
+    purchase_value,
     top_rows,
 )
 from auth.store import (  # noqa: E402
@@ -902,20 +904,34 @@ def _digest(file_bytes: bytes) -> str:
     return hashlib.sha256(file_bytes).hexdigest()[:16]
 
 
-def _write_atomic(path: Path, write) -> Path:
-    """⚠️ Процесс тус бүрийн түр нэр рүү бичээд АТОМААР солино.
+def _write_content_addressed(path: Path, write) -> Path:
+    """Агуулгын хаштай нэрээр НЭГ УДАА бичнэ.
 
-    Хэрэв шууд эцсийн нэр рүү бичвэл өөр процесс хагас бичигдсэн
-    файлыг уншиж эвдэрсэн Excel гаргана.
+    ⚠️ Нэр нь агуулгын sha256-г агуулдаг тул файл аль хэдийн байвал
+       агуулга нь ИЖИЛ — дахин бичихгүй. Энэ нь зүгээр л хурдны асуудал
+       биш: Windows дээр `os.replace` нь очих файлыг өөр процесс нээсэн
+       байхад [WinError 5] Access is denied өгдөг. Хоёр хэрэглэгч ижил
+       файл оруулахад яг тэр тохиолдол үүсдэг.
+
+    ⚠️ Байгаа файл нь ҮРГЭЛЖ бүтэн: бид зөвхөн `os.replace`-ээр л эцсийн
+       нэрийг үүсгэдэг (энэ нь атом үйлдэл), хагас бичигдсэн өгөгдөл нь
+       `.part` нэр дээр үлддэг.
     """
+    if path.exists():
+        return path
     path.parent.mkdir(parents=True, exist_ok=True)
     staging = path.with_name(f"{path.stem}.{os.getpid()}.part{path.suffix}")
     try:
         write(staging)
-        os.replace(staging, path)
+        try:
+            os.replace(staging, path)
+        except OSError:
+            # ⚠️ Уралдаанд хожигдов — өөр процесс энэ файлыг үүсгээд
+            #    нээчихсэн байна. Агуулга нь ижил тул алдаа биш.
+            if not path.exists():
+                raise
     finally:
-        if staging.exists():
-            staging.unlink(missing_ok=True)
+        staging.unlink(missing_ok=True)
     return path
 
 
@@ -926,7 +942,8 @@ def run_analysis(file_bytes: bytes, file_name: str,
     # ⚠️ Нэрийг агуулгаар нь өвөрмөц болгоно — ижил нэртэй өөр файл
     #    оруулсан хоёр хэрэглэгч бие биенийхээ өгөгдлийг дарахгүй.
     safe = f"{_digest(file_bytes)}_{Path(file_name).name}"
-    src = _write_atomic(TMP_DIR / safe, lambda dst: dst.write_bytes(file_bytes))
+    src = _write_content_addressed(
+        TMP_DIR / safe, lambda dst: dst.write_bytes(file_bytes))
     return collect(src, calculation_month=calculation_month,
                    lookback_months=lookback_months)
 
@@ -936,12 +953,18 @@ def build_excel(file_bytes: bytes, file_name: str,
                 calculation_month: str | None = None,
                 lookback_months: int | None = None) -> bytes:
     data = run_analysis(file_bytes, file_name, calculation_month, lookback_months)
+    # ⚠️ Тайлан нь ПРОЦЕСС тус бүрд өвөрмөц нэртэй: бид үүнийг шууд
+    #    уншаад устгана, хуваалцах шаардлагагүй. Ингэснээр код шинэчлэгдэхэд
+    #    хуучин тайлан дахин ашиглагдах, эсвэл өөр процесстой мөргөлдөх
+    #    (WinError 5) эрсдэлгүй.
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
     tag = f"{calculation_month or 'def'}_{lookback_months or 'def'}"
-    out = _write_atomic(
-        TMP_DIR / f"report_{_digest(file_bytes)}_{tag}.xlsx",
-        lambda dst: build_workbook(data, dst),
-    )
-    return out.read_bytes()
+    out = TMP_DIR / f"report_{_digest(file_bytes)}_{tag}.{os.getpid()}.xlsx"
+    try:
+        build_workbook(data, out)
+        return out.read_bytes()
+    finally:
+        out.unlink(missing_ok=True)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1102,12 +1125,12 @@ def inventory_table(rows: list) -> pd.DataFrame:
                         else round(r.position.net_sales_amount)),
         "Өртөг": round(r.position.sales_value),
         "Сарын дундаж": round(r.position.average_monthly_sales, 1),
-        "Үлдэгдэл (ш)": round(r.balance.current_stock, 1),
+        "Үлдэгдэл тоо ширхэг": round(r.balance.current_stock, 1),
         "Нөөцийн хоног": round(r.balance.current_stock_days, 1),
         "Зорилтот хоног": r.balance.target_days,
         "Зохистой нөөц": round(r.balance.recommended_stock, 1),
-        "Дутагдал (ш)": round(r.balance.shortage, 1),
-        "Илүүдэл (ш)": round(r.balance.excess, 1),
+        "Дутагдал тоо ширхэг": round(r.balance.shortage, 1),
+        "Илүүдэл тоо ширхэг": round(r.balance.excess, 1),
         "Төлөв": STATUS_TONE[r.stock_status]["labelMn"],
         "Шилжиж ирэх": r.transfer_in_qty,
         "Худалдан авах": r.new_purchase_qty,
@@ -1191,6 +1214,21 @@ RISK_ICON = {
     "OVERSTOCK": "📚",
 }
 
+#: Хяналтын самбарт харуулах ДАРААЛАЛ — эрүүлээс эрсдэлтэй рүү.
+#: ⚠️ Зөвхөн ХАРАГДАЦ. Ангиллын хил хязгаар нь тохиргоонд
+#: (inventory-status-rules.json → riskClasses) хэвээр.
+RISK_CARD_ORDER = ("HEALTHY", "WARNING", "OVERSTOCK", "CRITICAL")
+
+
+def order_risk_groups(groups: list[dict]) -> list[dict]:
+    """Ангиллуудыг харагдацын дараалалд оруулна.
+
+    Тохиргоонд шинэ ангилал нэмэгдвэл ЖАГСААЛТААС УНАХГҮЙ — эцэст нь
+    өөрийн дарааллаар залгагдана.
+    """
+    rank = {code: i for i, code in enumerate(RISK_CARD_ORDER)}
+    return sorted(groups, key=lambda g: rank.get(g["code"], len(rank)))
+
 
 def kpi_card(label: str, hue: str, icon: str, value: str,
              unit: str = "", foot: str = "") -> str:
@@ -1208,12 +1246,20 @@ def kpi_card(label: str, hue: str, icon: str, value: str,
     )
 
 
-def render_donut(groups: list[dict], total: int) -> str:
-    """Эрсдэлийн бүлгийн донут — conic-gradient, сан ашиглахгүй."""
+def render_donut(groups: list[dict], total: int, *,
+                 count_key: str = "count", hole_label: str = "БАЙРЛАЛ") -> str:
+    """Эрсдэлийн бүлгийн донут — conic-gradient, сан ашиглахгүй.
+
+    ⚠️ Сегментийн хувийг бүлгүүдийн НИЙЛБЭРЭЭС бодно. SKU тоогоор үзүүлэхэд
+       нэг SKU олон салбарт өөр төлөвтэй байж болох тул нийлбэр нь ялгаатай
+       SKU-гийн тооноос их гарч болно — тэр тохиолдолд ч дугуй 100% дүүрнэ.
+    """
+    parts = [max(0, g.get(count_key) or 0) for g in groups]
+    denom = sum(parts)
+
     stops, cursor = [], 0.0
-    for g in groups:
-        # ⚠️ Локал нэр нь модулийн share() форматлагчийг далдлахгүй байх ёстой
-        seg = (g["share"] or 0) * 100
+    for g, part in zip(groups, parts):
+        seg = (part / denom * 100) if denom else 0.0
         stops.append(f"{g['hue']} {cursor:.2f}% {cursor + seg:.2f}%")
         cursor += seg
     if cursor < 100:
@@ -1223,16 +1269,17 @@ def render_donut(groups: list[dict], total: int) -> str:
         f"<div class='sm-leg'>"
         f"<span class='sw' style='background:{g['hue']}'></span>"
         f"<span class='nm'>{esc(g['label_mn'])}</span>"
-        f"<span class='ct'>{g['count']:,} · {share(g['share'])}</span>"
+        f"<span class='ct'>{part:,} · "
+        f"{share(part / denom if denom else None)}</span>"
         f"</div>"
-        for g in groups
+        for g, part in zip(groups, parts)
     )
 
     return (
         f"<div class='sm-donut-wrap'>"
         f"<div class='sm-donut' style='background:conic-gradient({', '.join(stops)})'>"
         f"<div class='hole'><span class='hn'>{total:,}</span>"
-        f"<span class='hl'>БАЙРЛАЛ</span></div></div>"
+        f"<span class='hl'>{esc(hole_label)}</span></div></div>"
         f"<div class='sm-legend'>{legend}</div>"
         f"</div>"
     )
@@ -1277,7 +1324,6 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
     st.markdown(
         f"<div class='ii-topbar'><div>"
         f"<h1>Ерөнхий тойм</h1>"
-        f"<p class='sub'>Нөөцийн эрсдэлийг эрт илрүүлэх шийдвэр дэмжих систем</p>"
         f"</div><div class='ii-pills'>"
         f"<span class='ii-pill'>Тооцооны сар <b>{esc(meta['calculationMonth'])}</b></span>"
         f"<span class='ii-pill'><b>{esc(meta['periods'][0])}</b> … "
@@ -1336,16 +1382,17 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
 
     # ── 2-р мөр: НӨӨЦИЙН ӨРТӨГ эрсдэлийн ангиллаар ──
     cards = [kpi_card("Нийт нөөц", "#2563eb", "📦", f"{total_value:,.0f}",
-                      f"{sum(r.balance.current_stock for r in rows):,.0f} ширхэг · өртөг",
-                      f"<b>{scope['positions']:,}</b> байрлал")]
-    for g in groups:
+                      f"{scope['skus']:,} нэр төрөл · өртөг",
+                      f"<b>{scope['locations']:,}</b> салбар")]
+    for g in order_risk_groups(groups):
         cards.append(kpi_card(
             g["label_mn"], g["hue"],
             # ⚠️ Түлхүүр нь тохиргооны riskClasses кодтой ЯГ таарна
             RISK_ICON.get(g["code"], "•"),
             f"{g['value']:,.0f}",
-            f"{g['quantity']:,.0f} ширхэг · өртөг",
-            f"<b>{g['count']:,}</b> байрлал · {share(g['share'])}",
+            f"{g['skus']:,} нэр төрөл · өртөг",
+            # ⚠️ Донуттай ИЖИЛ хувь — нэр төрлийн нийлбэрээс бодсон
+            f"<b>{g['locations']:,}</b> салбар · {share(g['sku_mix'])}",
         ))
     st.markdown(f"<div class='sm-kpis'>{''.join(cards)}</div>", unsafe_allow_html=True)
 
@@ -1355,39 +1402,45 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
     with c1:
         st.markdown(
             "<div class='sm-panel'><h3>Нөөцийн эрсдэлийн статус</h3>"
-            "<p class='hint'>Байрлалын тоогоор</p>"
-            + render_donut(groups, scope["positions"]) + "</div>",
+            "<p class='hint'>Нэр төрлийн (SKU) тоогоор</p>"
+            + render_donut(order_risk_groups(groups), scope["skus"],
+                           count_key="skus", hole_label="SKU")
+            + "</div>",
             unsafe_allow_html=True,
         )
 
     with c2:
         st.markdown(
-            "<div class='sm-panel'><h3>Нөөц хэдэн хоног хүрэлцэх</h3>"
-            "<p class='hint'>Байрлалын тоогоор</p>"
+            "<div class='sm-panel'><h3>Нөөцийн тархалт</h3>"
+            "<p class='hint'>Хүрэлцэх хоногоор · SKU тоо</p>"
             + render_bars(view["stock_days"]) + "</div>",
             unsafe_allow_html=True,
         )
 
     with c3:
-        recs = view["recommendations"]
         transfer_qty = sum(t.quantity for t in view["transfers"])
         purchase_qty = sum(r.new_purchase_qty for r in rows)
         saving = sum(b.potential_saving or 0 for b in view["benchmarks"])
         stagnant = [r for r in rows if r.stock_status == "NO_MOVEMENT"]
 
+        # ⚠️ Шилжүүлгийн үнэлгээ нэгж өртөггүй мөр агуулж болно → N/A
+        transfer_value = (
+            None if any(t.estimated_value is None for t in view["transfers"])
+            else sum(t.estimated_value for t in view["transfers"])
+        )
+        pt = view["purchase_totals"]
+
         items = [
             ("🔁", "Шилжүүлэх санал", "#2563eb",
-             f"{len({t.product_code for t in view['transfers']}):,} SKU",
-             f"{transfer_qty:,} ш"),
+             f"{transfer_qty:,} ш", num(transfer_value)),
             ("🛒", "Захиалах санал", "#17a34a",
-             f"{len({r.position.product_code for r in rows if r.new_purchase_qty > 0}):,} SKU",
-             f"{purchase_qty:,} ш"),
+             f"{purchase_qty:,} ш", num(pt["value"])),
+            # ⚠️ Үнийн зөрүүнд «тоо ширхэг» гэсэн ойлголт байхгүй — N/A
             ("🏷️", "Үнэ анхааруулга", "#f5a524",
-             f"{len(view['margin_risk_codes']):,} SKU",
-             f"{saving:,.0f}"),
-            ("🕐", "Хөдөлгөөнгүй SKU", "#8b5cf6",
-             f"{len({r.position.product_code for r in stagnant}):,} SKU",
-             f"{sum(r.position.current_stock_value for r in stagnant):,.0f}"),
+             NOT_AVAILABLE, num(saving)),
+            ("🕐", "Хөдөлгөөнгүй нөөц", "#8b5cf6",
+             f"{sum(r.balance.current_stock for r in stagnant):,.0f} ш",
+             num(sum(r.position.current_stock_value for r in stagnant))),
         ]
         body = "".join(
             f"<div class='sm-item'>"
@@ -1396,11 +1449,15 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
             f"<span class='rt'>{esc(sub)}<b>{esc(val)}</b></span></div>"
             for icon, name, hue, sub, val in items
         )
-        crit = sum(1 for r in recs if r["priority"] == "CRITICAL")
+        # ⚠️ Захиалгын өртөг бүрэн хамраагүй бол ХЭДЭН мөр орсныг хэлнэ
+        note = ""
+        if not pt["complete"]:
+            note = (f"<p class='hint' style='margin-top:.5rem'>Захиалгын өртөг "
+                    f"{pt['rows_priced']:,}/{pt['rows_total']:,} мөрөөр — "
+                    f"үлдсэнд худалдан авалтын үнэ алга</p>")
         st.markdown(
             "<div class='sm-panel'><h3>AI зөвлөмжийн тойм</h3>"
-            f"<p class='hint'>Дүрэмд суурилсан engine · {crit:,} нэн яаралтай</p>"
-            f"<div class='sm-list'>{body}</div></div>",
+            f"<div class='sm-list'>{body}</div>{note}</div>",
             unsafe_allow_html=True,
         )
 
@@ -1424,7 +1481,8 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
         st.markdown(
             "<div class='sm-panel'><h3>Эрсдэлтэй ТОП 10</h3>"
             "<p class='hint'>Дутагдлын мөнгөн дүнгээр</p>"
-            + render_table([("Бүтээгдэхүүн", "nm"), ("Салбар", ""), ("Дутагдал (ш)", "num"),
+            + render_table([("Бүтээгдэхүүн", "nm"), ("Салбар", ""),
+                            ("Дутагдал тоо ширхэг", "num"),
                             ("Дүн", "num"), ("Нөөц хоног", "num")], body)
             + "</div>",
             unsafe_allow_html=True,
@@ -1432,6 +1490,7 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
 
     with t2:
         picked = sorted(view["transfers"], key=lambda t: -t.quantity)[:10]
+        days_by_pos = view["stock_days_by_pos"]
         body = [[
             f"<span class='nm' title='{esc(view['name_by_code'].get(t.product_code) or '')}'>"
             f"{esc(code_name(t.product_code, view['name_by_code'].get(t.product_code)))}</span>",
@@ -1439,12 +1498,15 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
             esc(t.to_location_code),
             f"{t.quantity:,}",
             f"{t.estimated_value:,.0f}" if t.estimated_value is not None else NOT_AVAILABLE,
+            # ⚠️ Хүлээн авах салбарын нөөц хоног — яаралтай эсэхийг харуулна
+            num(days_by_pos.get((t.product_code, t.to_location_code))),
         ] for t in picked]
         st.markdown(
             "<div class='sm-panel'><h3>Шилжүүлэх ТОП 10</h3>"
             "<p class='hint'>Компани доторхыг эхэлж ашиглана</p>"
             + render_table([("Бүтээгдэхүүн", "nm"), ("Хаанаас", ""), ("Хаашаа", ""),
-                            ("Тоо (ш)", "num"), ("Дүн", "num")], body)
+                            ("Тоо ширхэг", "num"), ("Дүн", "num"),
+                            ("Хүлээн авах нөөц хоног", "num")], body)
             + "</div>",
             unsafe_allow_html=True,
         )
@@ -1453,6 +1515,7 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
         picked = top_rows(rows, key=lambda r: r.new_purchase_qty)
         picked = [r for r in picked if r.new_purchase_qty > 0]
         bench = {b.product_code: b for b in view["benchmarks"]}
+        price_by_code = view["min_price_by_code"]
         body = []
         for r in picked:
             b = bench.get(r.position.product_code)
@@ -1464,12 +1527,16 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
                 f"{b.min_unit_price:,.0f}" if b and b.min_unit_price is not None
                 else NOT_AVAILABLE,
                 f"{r.new_purchase_qty:,}",
+                # ⚠️ Тооцоо view давхаргад — үнэгүй бол N/A
+                num(purchase_value(r, price_by_code)),
             ])
         st.markdown(
             "<div class='sm-panel'><h3>Захиалах ТОП 10</h3>"
             "<p class='hint'>Хамгийн хямд нийлүүлэгчтэй нь</p>"
             + render_table([("Бүтээгдэхүүн", "nm"), ("Нийлүүлэгч", "nm"),
-                            ("Хамгийн бага", "num"), ("Захиалах (ш)", "num")], body)
+                            ("Хамгийн бага", "num"),
+                            ("Захиалах тоо ширхэг", "num"),
+                            ("Нийт өртөг", "num")], body)
             + "</div>",
             unsafe_allow_html=True,
         )
@@ -1482,7 +1549,8 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
          f"{sum(r.balance.current_stock for r in rows):,.0f} ш"),
         ("⚖️", "#17a34a", "Нийт нөөцийн өртөг", f"{total_value:,.0f}"),
         ("🔁", "#8b5cf6", "Шилжүүлгээр хаагдах дутагдал",
-         f"{sum(r.transfer_in_qty for r in rows):,} ш"),
+         f"{sum(r.transfer_in_qty for r in rows):,} ш · "
+         f"{view['transfer_to_locations']:,} салбар"),
         ("📥", "#f5a524", "Захиалах шаардлагатай", f"{purchase_qty:,} ш"),
     ]
     st.markdown(
@@ -1498,12 +1566,56 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
         unsafe_allow_html=True,
     )
 
+    # ── ABC–XYZ нийлэмж — Excel-ийн «3.ABCXYZ Analysis» хуудастай ИЖИЛ ──
+    matrix = view["matrix"]
+    m_body = [[
+        f"<span class='sm-chip' style='background:"
+        f"{ABC_XYZ_TONE.get(c['abcXyz'], {}).get('bg', 'var(--surface-2)')};"
+        f"color:{ABC_XYZ_TONE.get(c['abcXyz'], {}).get('fg', 'var(--ink)')}'>"
+        f"{esc(c['abcXyz'])}</span>",
+        f"{c['skuCount']:,}",
+        num(c.get("netSales")),
+        f"{c['salesValue']:,.0f}",
+        share(c["salesShare"]),
+        f"{c['salesQty']:,.0f}",
+        f"{c['currentStock']:,.0f}",
+        f"{c['recommendedStock']:,.0f}",
+        f"{c['riskCount']:,}",
+    ] for c in matrix]
+
+    #: Нийлбэр мөр — Excel-ийн `total_keys`-тэй ижил багануудаар.
+    #: ⚠️ Орлого нэг ч нүдэнд алга бол нийлбэрийг ч гаргахгүй.
+    net_total = (None if any(c.get("netSales") is None for c in matrix)
+                 else sum(c["netSales"] for c in matrix))
+    m_body.append([
+        "<b>НИЙТ</b>",
+        f"<b>{sum(c['skuCount'] for c in matrix):,}</b>",
+        f"<b>{num(net_total)}</b>",
+        f"<b>{sum(c['salesValue'] for c in matrix):,.0f}</b>",
+        "<b>100.0%</b>",
+        f"<b>{sum(c['salesQty'] for c in matrix):,.0f}</b>",
+        f"<b>{sum(c['currentStock'] for c in matrix):,.0f}</b>",
+        f"<b>{sum(c['recommendedStock'] for c in matrix):,.0f}</b>",
+        f"<b>{sum(c['riskCount'] for c in matrix):,}</b>",
+    ])
+
+    st.markdown(
+        "<div class='sm-panel' style='margin-top:.9rem'>"
+        "<h3>ABC–XYZ нийлэмж</h3>"
+        "<p class='hint'>Excel тайлангийн «3.ABCXYZ Analysis» хуудастай ижил</p>"
+        + render_table([("ABCXYZ", ""), ("SKU тоо", "num"),
+                        ("НӨАТ-гүй дүн", "num"), ("Өртөг", "num"),
+                        ("Эзлэх %", "num"), ("Борлуулалтын тоо", "num"),
+                        ("Одоогийн нөөц", "num"), ("Зохистой нөөц", "num"),
+                        ("Эрсдэлтэй байрлал", "num")], m_body)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
     st.markdown(
         f"<div class='ii-note' style='margin-top:.9rem'>"
-        f"Дутагдлын нийт дүн <b>{shortage_value:,.0f} ₮</b> · "
-        f"илүүдлийн нийт дүн <b>{excess_value:,.0f} ₮</b>. "
-        f"⚠️ Ашгийн үзүүлэлт — эх өгөгдөлд борлуулалтын орлого байхгүй тул "
-        f"<b>{NOT_AVAILABLE}</b>."
+        f"Дутагдлын нийт дүн <b>{shortage_value:,.0f}</b> · "
+        f"илүүдлийн нийт дүн <b>{excess_value:,.0f}</b>."
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -1536,10 +1648,10 @@ def page_risk(view: dict, meta: dict) -> None:
             "Нэр": r["productName"] or NOT_AVAILABLE,
             "Хос": r["abcXyz"],
             "Салбар": r["locationCode"],
-            "Үлдэгдэл (ш)": round(r["currentStock"], 1),
+            "Үлдэгдэл тоо ширхэг": round(r["currentStock"], 1),
             "Нөөцийн хоног": round(r["stockDays"], 1),
             "Зорилтот хоног": r["targetDays"],
-            "Дутагдал (ш)": round(r["shortage"], 1),
+            "Дутагдал тоо ширхэг": round(r["shortage"], 1),
             "Дутагдлын дүн": r["shortageValue"],
             "Эрсдэл": r["risk"],
             "Арга хэмжээ": r["action"],
@@ -1625,7 +1737,7 @@ def page_purchase(view: dict, meta: dict) -> None:
             "Салбар": r.position.location_code,
             "Хос": r.position.abc_xyz,
             "Зохистой нөөц": round(r.balance.recommended_stock, 1),
-            "Үлдэгдэл (ш)": round(r.balance.current_stock, 1),
+            "Үлдэгдэл тоо ширхэг": round(r.balance.current_stock, 1),
             "Шилжиж ирэх": r.transfer_in_qty,
             "Худалдан авах": r.new_purchase_qty,
             "Шийдвэр": DECISION_TONE[r.decision]["labelMn"],
@@ -1820,7 +1932,7 @@ def page_quality(view: dict, meta: dict) -> None:
             "Код": r["productCode"],
             "Нэр": r["productName"] or NOT_AVAILABLE,
             "Салбар": r["locationCode"],
-            "Үлдэгдэл (ш)": round(r["currentStock"], 1),
+            "Үлдэгдэл тоо ширхэг": round(r["currentStock"], 1),
             "Үнийн дүн": r["stockValue"],
             "Сүүлийн борлуулалт": r["lastSalesPeriod"] or NOT_AVAILABLE,
             "Хэдэн сар": (r["monthsSinceLastSale"]
@@ -1904,10 +2016,23 @@ def render_setup_screen() -> None:
         name = cols[1].text_input("Бүтэн нэр", key="setup_name")
 
         if st.button("Хадгалаад нэвтрэх", type="primary", use_container_width=True):
-            if not looks_like_email(email):
+            # ⚠️ Хөтчийн автомат бөглөлт (autofill) нь талбарыг НҮДЭЭР
+            #    дүүргэдэг ч Streamlit-ийн серверт утга хүргэдэггүй. Тиймээс
+            #    «хоосон» ба «буруу хэлбэртэй»-г ЯЛГАЖ хэлэх ёстой — эс тэгвээс
+            #    хэрэглэгч бичсэн хаягаа буруу гэж ойлгоно.
+            if not (email or "").strip():
+                st.error(
+                    "Имэйл талбар хоосон байна. Хөтчийн автомат бөглөлт "
+                    "Streamlit-д хүрдэггүй — талбар дээр дарж, хаягаа "
+                    "**гараар бичнэ үү**."
+                )
+            elif not looks_like_email(email):
                 st.error("Имэйл хаягаа зөв бичнэ үү (жишээ: ner@monos.mn).")
             elif not password:
-                st.error("Нууц үгээ бөглөнө үү.")
+                st.error(
+                    "Нууц үг хоосон байна. Автомат бөглөлт биш, "
+                    "**гараар бичнэ үү**."
+                )
             else:
                 raw = build_users_json([(email, password, role, name)])
                 st.session_state["setup_json"] = raw
@@ -2155,11 +2280,11 @@ if not _has_file:
         "sheet-үүд нэрээр биш, <b>бүтцээр нь</b> танигдана.</div>"
         "<div class='up-cols'>"
         "<div class='up-col'><div class='h'>Sales</div>"
-        "<div class='d'>Бүтээгдэхүүн · байршил · сар · тоо хэмжээ · өртөг</div></div>"
+        "<div class='d'>Бүтээгдэхүүн · салбар · сар · тоо хэмжээ · өртөг</div></div>"
         "<div class='up-col'><div class='h'>Purchase</div>"
         "<div class='d'>Нийлүүлэгч · сар · тоо хэмжээ · дүн</div></div>"
         "<div class='up-col'><div class='h'>Stock</div>"
-        "<div class='d'>Бүтээгдэхүүн · байршил · үлдэгдэл · үнэ дүн</div></div>"
+        "<div class='d'>Бүтээгдэхүүн · салбар · үлдэгдэл · үнэ дүн</div></div>"
         "</div>",
         unsafe_allow_html=True,
     )

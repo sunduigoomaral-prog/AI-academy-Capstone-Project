@@ -280,8 +280,14 @@ STOCK_DAY_BUCKETS: list[tuple[str, float | None]] = [
 
 
 def risk_groups(rows: list) -> list[dict]:
-    """Байрлал бүрийг 4 ангиллын ДҮРМЭЭР ангилж нэгтгэнэ."""
+    """Байрлал бүрийг 4 ангиллын ДҮРМЭЭР ангилж нэгтгэнэ.
+
+    `skus` нь ялгаатай нэр төрөл, `locations` нь ялгаатай САЛБАРЫН тоо.
+    ⚠️ Нэг SKU олон ангилалд орж болно (салбар бүрт өөр төлөвтэй) тул
+       ангиллуудын `skus` нийлбэр нь нийт SKU-гаас ИХ гарч болно.
+    """
     total_positions = len(rows)
+    total_skus = len({r.position.product_code for r in rows})
     buckets: dict[str, list] = {c["code"]: [] for c in RISK_CLASSES}
     for r in rows:
         cls = classify_risk(r.balance.current_stock_days, r.balance.target_days)
@@ -290,29 +296,81 @@ def risk_groups(rows: list) -> list[dict]:
     out = []
     for cls in RISK_CLASSES:
         picked = buckets[cls["code"]]
+        skus = {r.position.product_code for r in picked}
         out.append({
             **cls,
             "label_mn": cls["labelMn"],
             "count": len(picked),
             "share": _share(len(picked), total_positions),
+            "skus": len(skus),
+            "sku_share": _share(len(skus), total_skus),
+            "locations": len({r.position.location_code for r in picked}),
             "value": sum(r.position.current_stock_value for r in picked),
             "quantity": sum(r.balance.current_stock for r in picked),
         })
+
+    #: Ангиллуудын НИЙЛБЭРЭЭС бодсон эзлэх хувь — нийлбэр нь яг 100%.
+    #: Донут ба KPI карт ЭНЭ хувийг хамтдаа хэрэглэнэ (зөрөхгүй байх ёстой).
+    sku_sum = sum(g["skus"] for g in out)
+    for g in out:
+        g["sku_mix"] = _share(g["skus"], sku_sum)
     return out
 
 
 def stock_day_distribution(rows: list) -> list[dict]:
-    """Нөөц хэдэн хоног хүрэлцэхээр байгааг бүлэглэнэ."""
-    counts = {label: 0 for label, _ in STOCK_DAY_BUCKETS}
+    """Нөөцийн тархалт — хүрэлцэх хоногийн бүлэг тус бүрийн SKU тоо.
+
+    ⚠️ Нэг SKU салбар бүрт өөр хоногтой байж болох тул бүлгүүдийн
+       нийлбэр нь нийт SKU-гаас ИХ гарч болно — энэ нь алдаа биш.
+    """
+    buckets: dict[str, set] = {label: set() for label, _ in STOCK_DAY_BUCKETS}
     for r in rows:
         days = r.balance.current_stock_days
         for label, upper in STOCK_DAY_BUCKETS:
             if upper is None or days <= upper:
-                counts[label] += 1
+                buckets[label].add(r.position.product_code)
                 break
+    counts = {label: len(codes) for label, codes in buckets.items()}
     peak = max(counts.values()) or 1
     return [{"label": label, "count": counts[label], "ratio": counts[label] / peak}
             for label, _ in STOCK_DAY_BUCKETS]
+
+
+def min_price_by_code(benchmarks: Iterable) -> dict[str, float]:
+    """SKU → хамгийн бага худалдан авалтын нэгж үнэ."""
+    return {b.product_code: b.min_unit_price for b in benchmarks
+            if b.min_unit_price is not None}
+
+
+def purchase_value(row, price_by_code: dict[str, float]) -> float | None:
+    """Захиалах тоо × ХАМГИЙН БАГА худалдан авалтын үнэ.
+
+    ⚠️ Суурь нь нөөцийн нэгж өртөг БИШ: захиалах шаардлагатай мөрийн
+       ихэнхэд тухайн салбарын нөөц 0 тул нэгж өртөг байхгүй. Худалдан
+       авалтын үнэ нь захиалгын өртгийг илэрхийлэх зөв суурь.
+    ⚠️ Үнэ байхгүй бол None — дүнг ТААМАГЛАХГҮЙ.
+    """
+    price = price_by_code.get(row.position.product_code)
+    return None if price is None else row.new_purchase_qty * price
+
+
+def purchase_totals(rows: list, benchmarks: Iterable) -> dict:
+    """Захиалгын нийт өртөг ба ХАМРАХ ХҮРЭЭ.
+
+    ⚠️ Үнэгүй мөрийг нийлбэрт оруулахгүй. Оронд нь хэдэн мөр орсныг
+       ил буцаана — UI дутуу хамралтыг хэрэглэгчид хэлэх ёстой.
+    """
+    price_by_code = min_price_by_code(benchmarks)
+    buying = [r for r in rows if r.new_purchase_qty > 0]
+    priced = [r for r in buying if purchase_value(r, price_by_code) is not None]
+    return {
+        "value": sum(purchase_value(r, price_by_code) for r in priced) or 0.0,
+        "rows_priced": len(priced),
+        "rows_total": len(buying),
+        "qty_priced": sum(r.new_purchase_qty for r in priced),
+        "qty_total": sum(r.new_purchase_qty for r in buying),
+        "complete": len(priced) == len(buying),
+    }
 
 
 def top_rows(rows: list, *, status: tuple[str, ...] | None = None,
@@ -581,6 +639,18 @@ def build_view(data: dict, flt: Filter | None = None) -> dict:
             {"code": code, **entry}
             for code, entry in sorted(tier_totals.items(), key=lambda kv: -kv[1]["quantity"])
         ],
+        #: (SKU, салбар) → нөөц хоног — шилжүүлгийн хүснэгтэд хэрэглэнэ
+        "stock_days_by_pos": {
+            (r.position.product_code, r.position.location_code):
+                r.balance.current_stock_days
+            for r in rows
+        },
+        #: Шилжүүлэг ХҮЛЭЭН АВАХ ялгаатай салбарын тоо
+        "transfer_to_locations": len({t.to_location_code for t in transfers}),
+        #: Захиалгын өртөг — хамгийн бага худалдан авалтын үнээр, хамралттай
+        "purchase_totals": purchase_totals(rows, benchmarks),
+        #: SKU → хамгийн бага нэгж үнэ (хүснэгтэд мөр тус бүрд хэрэглэнэ)
+        "min_price_by_code": min_price_by_code(benchmarks),
         "recommendations": recommendations,
         "risk_rows": risk_rows,
         "stagnant_rows": stagnant_rows,
