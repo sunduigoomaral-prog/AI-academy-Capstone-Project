@@ -76,7 +76,7 @@ st.set_page_config(
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 /* ══════════════════════════════════════════════════════════════
    ДИЗАЙНЫ СИСТЕМ — ногоон + цагаан, enterprise analytics
@@ -124,7 +124,7 @@ CSS = """
   --r-sm: 6px; --r: 10px; --r-lg: 14px;
   --shadow: 0 1px 2px rgba(16,40,30,.04), 0 1px 3px rgba(16,40,30,.03);
 
-  --font: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -135,7 +135,7 @@ html, body, [class*="css"], .stApp, button, input, select, textarea {
 
 .stApp { background: var(--canvas); color: var(--ink); }
 .block-container {
-  padding: .55rem 1.3rem 2rem !important;
+  padding: .9rem 1.5rem 2.5rem !important;
   max-width: 100% !important;
 }
 #MainMenu, footer, header[data-testid="stHeader"] { display: none !important; }
@@ -236,8 +236,8 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"] {
 /* ══ КАРТ / ПАНЕЛ ════════════════════════════════════════════ */
 .ii-card, .sm-panel {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-lg); padding: .8rem .9rem;
-  box-shadow: var(--shadow); margin-bottom: .55rem;
+  border-radius: var(--r-lg); padding: .95rem 1.05rem;
+  box-shadow: var(--shadow); margin-bottom: .7rem;
 }
 .sm-panel { height: 100%; margin-bottom: 0; }
 .ii-card h3, .sm-panel h3 {
@@ -490,8 +490,8 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
 /* ══ НЭВТРЭХ ДЭЛГЭЦ ══════════════════════════════════════════ */
 .ii-brandpane {
   background: linear-gradient(155deg, var(--brand) 0%, var(--nav) 100%);
-  border-radius: 18px; padding: 2.1rem 2rem 1.5rem;
-  color: #fff; min-height: 27rem;
+  border-radius: 18px; padding: 2.4rem 2.2rem 1.8rem;
+  color: #fff; min-height: 30rem;
   display: flex; flex-direction: column; justify-content: space-between;
   box-shadow: 0 20px 44px -26px rgba(10, 53, 39, .6);
 }
@@ -526,7 +526,7 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   border-top: 1px solid rgba(255,255,255,.16);
   padding-top: var(--s3); margin-top: var(--s4);
 }
-.ii-formpane { padding: var(--s5) var(--s1) 0 var(--s4); }
+.ii-formpane { padding: var(--s5) var(--s2) 0 var(--s2); }
 .ii-formpane .eyebrow {
   font-size: .58rem; font-weight: 700; letter-spacing: .16em;
   text-transform: uppercase; color: var(--brand); margin-bottom: .35rem;
@@ -536,7 +536,7 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
   margin: 0; letter-spacing: -.02em;
 }
 .ii-formpane p.sub {
-  font-size: .8rem; color: var(--muted); margin: .35rem 0 var(--s4); line-height: 1.55;
+  font-size: .82rem; color: var(--muted); margin: .5rem 0 var(--s5); line-height: 1.65;
 }
 .ii-formpane .note {
   font-size: .68rem; color: var(--muted); line-height: 1.6;
@@ -685,14 +685,15 @@ div[data-testid="stDownloadButton"] button:hover {
   display: block !important; font-size: .7rem !important;
   font-weight: 600 !important; color: var(--muted) !important;
 }
-.ii-auth div[data-testid="stTextInput"] input { height: 2.5rem; font-size: .88rem; }
+.ii-auth div[data-testid="stTextInput"] input { height: 2.7rem; font-size: .9rem; }
+.ii-auth div[data-testid="stTextInput"] { margin-bottom: .35rem; }
 .ii-auth div[data-testid="stForm"] { border: none; padding: 0; }
 div[data-testid="stForm"] { border: none; padding: 0; }
 
 /* Мөрийн хоорондын зайг жигдрүүлэх */
 div[data-testid="stVerticalBlock"] > div:empty { display: none; }
-div[data-testid="stVerticalBlock"] { gap: .45rem !important; }
-div[data-testid="stHorizontalBlock"] { gap: .5rem !important; }
+div[data-testid="stVerticalBlock"] { gap: .6rem !important; }
+div[data-testid="stHorizontalBlock"] { gap: .65rem !important; }
 /* ⚠️ stElementContainer-ийн margin-г тэглэхгүй — зэргэлдээ элементүүд
    давхцаж, текст дарагдан таллаа тасарч байсан. Зайг vertical block-ийн
    gap хариуцна. */
@@ -739,6 +740,29 @@ SIDEBAR_HIDDEN = """
   section[data-testid="stSidebar"],
   [data-testid="stSidebarCollapseButton"],
   [data-testid="collapsedControl"] { display: none !important; }
+
+  /* ⚠️ Цэс нуугдсан тул үндсэн блок бүтэн өргөнд тархаж, агуулга
+     зүүн тийш наалддаг. Өргөнийг хязгаарлаж ТӨВЛҮҮЛНЭ. */
+  .block-container {
+    max-width: 72rem !important;
+    margin: 0 auto !important;
+    padding: 2.4rem 2.5rem 3rem !important;
+  }
+
+  /* Хоёр самбарын хооронд бодит зай */
+  div[data-testid="stHorizontalBlock"] { gap: 3.2rem !important; }
+
+  /* Нарийн дэлгэцэд зэрэгцүүлэхгүй — дараалуулна */
+  @media (max-width: 900px) {
+    div[data-testid="stHorizontalBlock"] {
+      flex-direction: column !important; gap: 1.5rem !important;
+    }
+    div[data-testid="stHorizontalBlock"] > div {
+      width: 100% !important; flex: 1 1 100% !important;
+    }
+    .block-container { padding: 1.4rem 1.2rem 2rem !important; }
+    .ii-brandpane { min-height: 0; }
+  }
 </style>
 """
 
@@ -1741,8 +1765,12 @@ def render_brand_pane() -> None:
 
 def render_setup_screen() -> None:
     """`DSS_USERS` тохируулаагүй үед. ⚠️ Анхны нууц үг ӨГӨХГҮЙ."""
-    st.markdown("<div class='ii-auth ii-auth-page'>", unsafe_allow_html=True)
-    left, right = st.columns([1.1, 1], gap="large")
+    st.markdown(
+        "<div class='ii-auth ii-auth-page'></div>"
+        "",
+        unsafe_allow_html=True,
+    )
+    left, right = st.columns([1.05, 0.9], gap="large")
 
     with left:
         render_brand_pane()
@@ -1814,8 +1842,13 @@ def render_setup_screen() -> None:
 
 def render_login_screen(attempts: Attempts) -> None:
     """⭐ ИМЭЙЛ + НУУЦ ҮГ + «Нэвтрэх» товч."""
-    st.markdown("<div class='ii-auth ii-auth-page'>", unsafe_allow_html=True)
-    left, right = st.columns([1.1, 1], gap="large")
+    st.markdown(
+        "<div class='ii-auth ii-auth-page'></div>"
+        "",
+        unsafe_allow_html=True,
+    )
+    # ⚠️ Гурав дахь багана нь ЗАЙ — маягт хэт өргөсөж сунжрахаас сэргийлнэ
+    left, right = st.columns([1.05, 0.82], gap="large")
 
     with left:
         render_brand_pane()
@@ -1825,9 +1858,9 @@ def render_login_screen(attempts: Attempts) -> None:
             "<div class='ii-formpane'>"
             "<div class='eyebrow'>Хэрэглэгчийн эрх</div>"
             "<h2>Нэвтрэх</h2>"
-            "<p class='sub'>Энэ систем нь борлуулалт, нөөц, худалдан авах "
-            "үнийн дотоод мэдээлэл агуулдаг. Эрх олгогдсон хэрэглэгч "
-            "л нэвтэрнэ.</p></div>",
+            "<p class='sub'>Энэхүү систем нь борлуулалт, нөөц болон худалдан "
+            "авах үнийн нууцлалтай мэдээллийг агуулдаг. Системд зөвхөн "
+            "байгууллагаас эрх олгогдсон хэрэглэгч нэвтрэх боломжтой.</p></div>",
             unsafe_allow_html=True,
         )
 
