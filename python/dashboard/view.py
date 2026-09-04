@@ -13,8 +13,20 @@ DASHBOARD VIEW — шүүлт ба нэгтгэлийн давхарга.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Iterable
+
+_RULES_PATH = (Path(__file__).resolve().parents[2]
+               / "src" / "config" / "inventory-status-rules.json")
+
+
+@lru_cache(maxsize=1)
+def _rules() -> dict:
+    """⚠️ TypeScript хэрэгжүүлэлттэй ИЖИЛ файлыг уншина."""
+    return json.loads(_RULES_PATH.read_text(encoding="utf-8"))
 
 # ─────────────────────────────────────────────────────────────────────
 # §26 — өнгөний систем (src/config/color-system.ts-тэй ижил)
@@ -70,6 +82,39 @@ LOCATION_TYPE_LABEL = {
 NOT_AVAILABLE = "N/A"
 MISSING_SOURCE_FIELD = "Missing source field"
 
+_SIGNATURES_PATH = (
+    Path(__file__).resolve().parents[2] / "src" / "config" / "dataset-signatures.json"
+)
+
+
+@lru_cache(maxsize=1)
+def revenue_header_aliases() -> tuple[str, ...]:
+    """Орлогын багананд танигдах гарчгууд — тохиргооноос уншина.
+
+    ⚠️ Энд бичихгүй: alias жагсаалт өөрчлөгдвөл шалтгааны текст өөрөө
+       дагаж шинэчлэгдэх ёстой (хоёр газар хуулбарлавал зөрөх эрсдэлтэй).
+    """
+    cfg = json.loads(_SIGNATURES_PATH.read_text(encoding="utf-8"))
+    return tuple(cfg["roleAliases"]["salesAmountExVat"])
+
+
+def revenue_missing_reason(missing: int, total: int) -> str:
+    """Орлого яагаад N/A болсныг ТОДОРХОЙ хэлнэ.
+
+    Багана огт алга байх ба зарим мөрд утга дутуу байх нь өөр асуудал —
+    хэрэглэгч аль нь болохыг мэдэхгүй бол засах аргагүй.
+    """
+    if total and missing < total:
+        return (
+            f"{missing:,}/{total:,} байрлалд «НӨАТ-гүй дүн» утга алга — "
+            "хагас дүн харуулахгүй"
+        )
+    names = " · ".join(revenue_header_aliases()[:4])
+    return (
+        "Sales хуудсанд орлогын багана алга. "
+        f"Танигдах гарчиг: {names} …"
+    )
+
 #: Эх өгөгдөлд сувгийн бие даасан хэмжээст байхгүй (docs/01 §5)
 CHANNEL_UNAVAILABLE_REASON = (
     "Эх өгөгдөлд сувгийн бие даасан лавлах байхгүй — `Суваг` багана нь "
@@ -117,6 +162,25 @@ class Filter:
 
     def matches_product(self, product_code: str) -> bool:
         return not self.product_codes or product_code in self.product_codes
+
+
+def available_periods(excel_periods: list[str], months_back: int = 24) -> list[str]:
+    """Тооцооны сар болгож сонгож болох саруудыг буцаана.
+
+    ⚠️ Эх өгөгдөлд БАЙГАА саруудаас л сонгоно — байхгүй сарыг
+       санал болговол хоосон тайлан гарна.
+    """
+    return sorted(set(excel_periods), reverse=True)[:months_back]
+
+
+def next_period(period: str) -> str:
+    """`YYYY-MM` → дараагийн сар. Тооцооны сар нь дундажид ОРДОГГҮЙ тул
+    хамгийн сүүлийн борлуулалттай сарын ДАРААХ сарыг санал болгоно."""
+    year, month = (int(x) for x in period.split("-"))
+    month += 1
+    if month > 12:
+        year, month = year + 1, 1
+    return f"{year:04d}-{month:02d}"
 
 
 def filter_options(data: dict) -> dict:
@@ -177,18 +241,36 @@ def _share(part: float, whole: float) -> float | None:
     return None if whole <= 0 else part / whole
 
 
-#: §26 — 6 төлөвийг удирдлагад ойлгомжтой 4 бүлэг болгоно.
-#: ⚠️ Энэ бол ХАРАГДАЦЫН бүлэглэл. Үндсэн 6 төлөв хэвээр хадгалагдана.
-RISK_GROUPS: list[dict] = [
-    {"code": "RISK", "label_mn": "Эрсдэлтэй", "hue": "#e5484d",
-     "statuses": ("STOCKOUT_RISK", "LOW_STOCK")},
-    {"code": "WATCH", "label_mn": "Анхаарах", "hue": "#f5a524",
-     "statuses": ("SLOW_MOVING", "NO_MOVEMENT")},
-    {"code": "HEALTHY", "label_mn": "Эрүүл", "hue": "#17a34a",
-     "statuses": ("OPTIMAL",)},
-    {"code": "EXCESS", "label_mn": "Илүүдэлтэй", "hue": "#8b5cf6",
-     "statuses": ("OVERSTOCK",)},
-]
+#: Эрсдэлийн ангилалын дүрэм — `inventory-status-rules.json`-оос.
+#: ⚠️ Босго утга КОДОД БИШ. Дараалал чухал: эхний таарсан нь сонгогдоно.
+RISK_CLASSES: list[dict] = _rules()["riskClasses"]["classes"]
+
+#: Хуучин нэр — гадны код эвдрэхээс сэргийлж үлдээв
+RISK_GROUPS = RISK_CLASSES
+
+
+def classify_risk(stock_days: float, target_days: float) -> dict:
+    """Нөөцийн хоногийг ЗОРИЛТОТ хоногтой харьцуулж ангилна.
+
+    ⚠️ Зорилтот хоног 0 бол харьцаа гаргах боломжгүй — хамгийн эрсдэлтэй
+       гэж үзнэ (нөөц шаардлагагүй атлаа үлдэгдэлтэй байх нь илүүдэл
+       биш, харин тооцоолол хийх боломжгүйг илэрхийлнэ).
+    """
+    if target_days <= 0:
+        return RISK_CLASSES[0] if stock_days <= 0 else RISK_CLASSES[-1]
+
+    ratio = stock_days / target_days
+    for cls in RISK_CLASSES:
+        upper = cls.get("maxRatio")
+        if upper is None:
+            return cls
+        # ⚠️ Хилийн утга: Анхаарах нь `<` (85% нь Эрүүл рүү), бусад нь `≤`
+        if cls.get("maxRatioInclusive", True):
+            if ratio <= upper + 1e-9:
+                return cls
+        elif ratio < upper - 1e-9:
+            return cls
+    return RISK_CLASSES[-1]
 
 #: Нөөцийн хоногийн бүлэг — дээд хязгаар (сүүлийнх нь хязгааргүй)
 STOCK_DAY_BUCKETS: list[tuple[str, float | None]] = [
@@ -198,13 +280,19 @@ STOCK_DAY_BUCKETS: list[tuple[str, float | None]] = [
 
 
 def risk_groups(rows: list) -> list[dict]:
-    """Төлөв бүрийн байрлалын тоо ба нөөцийн өртгийг 4 бүлгээр."""
+    """Байрлал бүрийг 4 ангиллын ДҮРМЭЭР ангилж нэгтгэнэ."""
     total_positions = len(rows)
+    buckets: dict[str, list] = {c["code"]: [] for c in RISK_CLASSES}
+    for r in rows:
+        cls = classify_risk(r.balance.current_stock_days, r.balance.target_days)
+        buckets[cls["code"]].append(r)
+
     out = []
-    for group in RISK_GROUPS:
-        picked = [r for r in rows if r.stock_status in group["statuses"]]
+    for cls in RISK_CLASSES:
+        picked = buckets[cls["code"]]
         out.append({
-            **group,
+            **cls,
+            "label_mn": cls["labelMn"],
             "count": len(picked),
             "share": _share(len(picked), total_positions),
             "value": sum(r.position.current_stock_value for r in picked),
@@ -249,6 +337,16 @@ def _kpis(rows: list, positions: int) -> list[dict]:
     def decision_count(code: str) -> int:
         return sum(1 for r in rows if r.decision == code)
 
+    # ⚠️ Орлогын багана байхгүй байрлал байвал НИЙЛБЭР гаргахгүй —
+    #    хагас дутуу дүн харуулахаас N/A нь илүү үнэн.
+    cogs = sum(r.position.sales_value for r in rows)
+    missing_revenue = sum(1 for r in rows if r.position.net_sales_amount is None)
+    revenue = (None if missing_revenue
+               else sum(r.position.net_sales_amount for r in rows))
+    #: Багана огт алга уу, эсвэл зарим мөр дутуу юу — ялгаж хэлнэ
+    revenue_reason = (None if revenue is not None
+                      else revenue_missing_reason(missing_revenue, len(rows)))
+
     def status_kpi(key: str, code: str) -> dict:
         count = status_count(code)
         share = _share(count, positions)
@@ -264,20 +362,32 @@ def _kpis(rows: list, positions: int) -> list[dict]:
     return [
         {"key": "skuCount", "label_mn": "Нийт SKU",
          "value": len({r.position.product_code for r in rows}), "format": "int"},
-        {"key": "salesValue", "label_mn": "Нийт борлуулалт (₮)",
-         "value": sum(r.position.sales_value for r in rows),
-         "sub": "⚠️ өртгөөр (орлого байхгүй)", "format": "money"},
+        # ── Орлого: «Худалдах НӨАТ-гүй дүн» багана байвал л ──
+        {"key": "revenue", "label_mn": "Борлуулалтын орлого (₮)",
+         "value": revenue,
+         "sub": None if revenue is not None else None,
+         "unavailable_reason": revenue_reason,
+         "format": "money"},
+        {"key": "salesValue", "label_mn": "Борлуулалтын өртөг (₮)",
+         "value": cogs,
+         "sub": "НӨАТ-гүй" if revenue is not None else "⚠️ орлого байхгүй",
+         "format": "money"},
         {"key": "salesQty", "label_mn": "Борлуулалтын тоо",
          "value": sum(r.position.sales_qty for r in rows), "format": "int"},
         {"key": "stockQty", "label_mn": "Нийт нөөц",
          "value": sum(r.balance.current_stock for r in rows), "format": "int"},
         {"key": "stockValue", "label_mn": "Нөөцийн өртөг (₮)",
          "value": sum(r.position.current_stock_value for r in rows), "format": "money"},
-        # ⚠️ §28 — эх өгөгдөлд ОРЛОГО байхгүй тул тоо ЗОХИОХГҮЙ
-        {"key": "grossProfit", "label_mn": "Gross Profit", "value": None,
-         "unavailable_reason": MISSING_SOURCE_FIELD, "format": "money"},
-        {"key": "grossMargin", "label_mn": "Gross Margin %", "value": None,
-         "unavailable_reason": MISSING_SOURCE_FIELD, "format": "percent"},
+        # ⚠️ Ашиг зөвхөн ОРЛОГО байгаа үед л тооцогдоно — үгүй бол N/A
+        {"key": "grossProfit", "label_mn": "Нийт ашиг (₮)",
+         "value": None if revenue is None else revenue - cogs,
+         "unavailable_reason": revenue_reason,
+         "format": "money"},
+        {"key": "grossMargin", "label_mn": "Ашгийн хувь",
+         "value": (None if revenue is None or revenue == 0
+                   else (revenue - cogs) / revenue),
+         "unavailable_reason": revenue_reason,
+         "format": "percent"},
         status_kpi("critical", "STOCKOUT_RISK"),
         status_kpi("lowStock", "LOW_STOCK"),
         status_kpi("excess", "OVERSTOCK"),
@@ -305,6 +415,8 @@ def _matrix(rows: list) -> list[dict]:
                 "abcXyz": key, "abc": abc, "xyz": xyz, "skus": set(),
                 "salesValue": 0.0, "salesQty": 0.0, "currentStock": 0.0,
                 "recommendedStock": 0.0, "riskCount": 0,
+                # ⚠️ Орлого — багана байхгүй бол None хэвээр
+                "netSales": 0.0, "hasNetSales": True,
             }
 
     for r in rows:
@@ -313,6 +425,10 @@ def _matrix(rows: list) -> list[dict]:
             continue
         cell["skus"].add(r.position.product_code)
         cell["salesValue"] += r.position.sales_value
+        if r.position.net_sales_amount is None:
+            cell["hasNetSales"] = False
+        else:
+            cell["netSales"] += r.position.net_sales_amount
         cell["salesQty"] += r.position.sales_qty
         cell["currentStock"] += r.balance.current_stock
         cell["recommendedStock"] += r.balance.recommended_stock
@@ -327,6 +443,7 @@ def _matrix(rows: list) -> list[dict]:
             "xyz": cell["xyz"],
             "skuCount": len(cell["skus"]),
             "salesValue": cell["salesValue"],
+            "netSales": cell["netSales"] if cell["hasNetSales"] else None,
             "salesShare": _share(cell["salesValue"], total_value),
             "salesQty": cell["salesQty"],
             "currentStock": cell["currentStock"],
@@ -445,6 +562,8 @@ def build_view(data: dict, flt: Filter | None = None) -> dict:
     return {
         "meta": data["meta"],
         "filter_active": flt.is_active,
+        #: Орлогын багана эх өгөгдөлд байгаа эсэх
+        "has_revenue": all(r.position.net_sales_amount is not None for r in rows) if rows else False,
         "scope": {
             "positions": len(rows),
             "skus": len(codes_in_scope),

@@ -33,6 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "python"))
 
 from dashboard.view import (  # noqa: E402
     ABC_ORDER,
+    available_periods,
     DECISION_TONE,
     NOT_AVAILABLE,
     PRIORITY_TONE,
@@ -43,6 +44,7 @@ from dashboard.view import (  # noqa: E402
     build_view,
     filter_options,
     monthly_sales_series,
+    next_period,
     top_rows,
 )
 from auth.store import (  # noqa: E402
@@ -178,9 +180,20 @@ section[data-testid="stSidebar"] .block-container {
 section[data-testid="stSidebar"] .stButton button {
   background: transparent; border: none; color: var(--nav-ink);
   text-align: left; justify-content: flex-start;
-  font-size: .84rem; font-weight: 500; padding: .48rem .6rem;
+  font-size: .84rem; font-weight: 500; padding: .48rem .7rem;
   border-radius: var(--r-sm); width: 100%; line-height: 1.35;
   transition: background .12s ease, color .12s ease;
+}
+/* ⚠️ Streamlit товчны ДОТООД элемент бичгийг голлуулдаг тул тэдгээрийг
+   ч зүүн тийш тэгшилнэ — эс бөгөөс цэс голлож харагдана. */
+section[data-testid="stSidebar"] .stButton button > div,
+section[data-testid="stSidebar"] .stButton button p,
+section[data-testid="stSidebar"] .stButton button div[data-testid="stMarkdownContainer"] {
+  text-align: left !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  width: 100%;
+  margin: 0;
 }
 section[data-testid="stSidebar"] .stButton button:hover {
   background: var(--nav-2); color: #fff;
@@ -388,7 +401,7 @@ section[data-testid="stSidebar"] .stButton button[kind="primary"] {
   color: var(--ink);
 }
 .sm-tbl .nm {
-  max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--ink); font-weight: 500;
 }
 
@@ -490,59 +503,59 @@ div[data-testid="stDataFrame"] * { font-family: var(--font) !important; }
 /* ══ НЭВТРЭХ ДЭЛГЭЦ ══════════════════════════════════════════ */
 .ii-brandpane {
   background: linear-gradient(155deg, var(--brand) 0%, var(--nav) 100%);
-  border-radius: 18px; padding: 2.4rem 2.2rem 1.8rem;
-  color: #fff; min-height: 30rem;
+  border-radius: 16px; padding: 1.6rem 1.7rem 1.2rem;
+  color: #fff;
   display: flex; flex-direction: column; justify-content: space-between;
   box-shadow: 0 20px 44px -26px rgba(18, 35, 51, .55);
 }
 .ii-brandpane .logo {
-  margin-bottom: var(--s5); background: #fff; border-radius: var(--r);
-  padding: .55rem .8rem; display: inline-block;
+  margin-bottom: 1.1rem; background: #fff; border-radius: var(--r);
+  padding: .4rem .6rem; display: inline-block;
 }
-.ii-brandpane .logo img { height: 42px; width: auto; display: block; }
+.ii-brandpane .logo img { height: 32px; width: auto; display: block; }
 .ii-wordmark { font-size: 1.5rem; font-weight: 800; letter-spacing: .2em; color: #fff; }
 .ii-wordmark-sub {
   font-size: .55rem; letter-spacing: .2em; text-transform: uppercase;
   color: rgba(255,255,255,.65); margin-top: .3rem;
 }
 .ii-brandpane h1 {
-  font-size: 1.55rem; font-weight: 700; line-height: 1.25;
-  margin: 0 0 .5rem; color: #fff; letter-spacing: -.02em;
+  font-size: 1.3rem; font-weight: 700; line-height: 1.3;
+  margin: 0 0 .45rem; color: #fff; letter-spacing: -.02em;
 }
 .ii-brandpane .lede {
-  font-size: .8rem; line-height: 1.65; color: rgba(255,255,255,.78);
-  margin: 0 0 var(--s5); max-width: 46ch;
+  font-size: .74rem; line-height: 1.55; color: rgba(255,255,255,.78);
+  margin: 0 0 1rem; max-width: 52ch;
 }
-.ii-feat { display: flex; gap: var(--s2); align-items: center; margin-bottom: .42rem; }
+.ii-feat { display: flex; gap: .5rem; align-items: center; margin-bottom: .28rem; }
 .ii-feat .ico {
-  width: 25px; height: 25px; border-radius: var(--r-sm); flex: none;
+  width: 21px; height: 21px; border-radius: 5px; flex: none;
   background: rgba(255,255,255,.15); display: flex;
-  align-items: center; justify-content: center; font-size: .75rem;
+  align-items: center; justify-content: center; font-size: .66rem;
 }
 .ii-feat .txt {
-  font-size: .78rem; line-height: 1.4; font-weight: 500; color: rgba(255,255,255,.92);
+  font-size: .73rem; line-height: 1.35; font-weight: 500; color: rgba(255,255,255,.92);
 }
 .ii-feat .txt b { color: #fff; font-weight: 600; }
 .ii-brandfoot {
-  font-size: .64rem; color: rgba(255,255,255,.55);
+  font-size: .6rem; color: rgba(255,255,255,.55);
   border-top: 1px solid rgba(255,255,255,.16);
-  padding-top: var(--s3); margin-top: var(--s4);
+  padding-top: .55rem; margin-top: .9rem;
 }
-.ii-formpane { padding: var(--s5) var(--s2) 0 var(--s2); }
+.ii-formpane { padding: .9rem var(--s2) 0 var(--s2); }
 .ii-formpane .eyebrow {
   font-size: .58rem; font-weight: 700; letter-spacing: .16em;
   text-transform: uppercase; color: var(--brand); margin-bottom: .35rem;
 }
 .ii-formpane h2 {
-  font-size: 1.5rem; font-weight: 700; color: var(--ink);
+  font-size: 1.32rem; font-weight: 700; color: var(--ink);
   margin: 0; letter-spacing: -.02em;
 }
 .ii-formpane p.sub {
-  font-size: .82rem; color: var(--muted); margin: .5rem 0 var(--s5); line-height: 1.65;
+  font-size: .76rem; color: var(--muted); margin: .4rem 0 1rem; line-height: 1.55;
 }
 .ii-formpane .note {
-  font-size: .68rem; color: var(--muted); line-height: 1.6;
-  border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s4);
+  font-size: .66rem; color: var(--muted); line-height: 1.55;
+  border-top: 1px solid var(--line); padding-top: .6rem; margin-top: 1rem;
 }
 
 /* ══ ХУУДАСЛАЛТ ══════════════════════════════════════════════ */
@@ -668,13 +681,32 @@ div[data-baseweb="select"] > div:hover { border-color: var(--brand-100) !importa
   transition: all .12s ease;
 }
 .stButton button:hover { border-color: var(--brand); color: var(--brand); }
+/* ⚠️ Streamlit-ийн анхдагч primaryColor нь УЛААН. .streamlit/config.toml-д
+   ногоон болгосон ч хувилбар хооронд testid өөрчлөгддөг тул бүх
+   боломжит сонгогчийг зорино. */
 .stButton button[kind="primary"],
-.stButton button[kind="primaryFormSubmit"] {
-  background: var(--brand); border-color: var(--brand); color: #fff; height: 2.5rem;
+.stButton button[kind="primaryFormSubmit"],
+button[data-testid="stBaseButton-primary"],
+button[data-testid="stBaseButton-primaryFormSubmit"],
+div[data-testid="stFormSubmitButton"] button {
+  background: var(--brand) !important;
+  border-color: var(--brand) !important;
+  color: #fff !important;
+  height: 2.5rem;
 }
 .stButton button[kind="primary"]:hover,
-.stButton button[kind="primaryFormSubmit"]:hover {
-  background: var(--brand-600); border-color: var(--brand-600); color: #fff;
+.stButton button[kind="primaryFormSubmit"]:hover,
+button[data-testid="stBaseButton-primary"]:hover,
+button[data-testid="stBaseButton-primaryFormSubmit"]:hover,
+div[data-testid="stFormSubmitButton"] button:hover {
+  background: var(--brand-600) !important;
+  border-color: var(--brand-600) !important;
+  color: #fff !important;
+}
+/* Хажуугийн цэсний идэвхтэй мөр — ногоон хэвээр */
+section[data-testid="stSidebar"] .stButton button[kind="primary"],
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] {
+  background: var(--brand) !important; color: #fff !important;
 }
 div[data-testid="stDownloadButton"] button {
   background: var(--brand); border-color: var(--brand); color: #fff;
@@ -687,8 +719,8 @@ div[data-testid="stDownloadButton"] button:hover {
   display: block !important; font-size: .7rem !important;
   font-weight: 600 !important; color: var(--muted) !important;
 }
-.ii-auth div[data-testid="stTextInput"] input { height: 2.7rem; font-size: .9rem; }
-.ii-auth div[data-testid="stTextInput"] { margin-bottom: .35rem; }
+.ii-auth div[data-testid="stTextInput"] input { height: 2.5rem; font-size: .88rem; }
+.ii-auth div[data-testid="stTextInput"] { margin-bottom: .15rem; }
 .ii-auth div[data-testid="stForm"] { border: none; padding: 0; }
 div[data-testid="stForm"] { border: none; padding: 0; }
 
@@ -746,9 +778,9 @@ SIDEBAR_HIDDEN = """
   /* ⚠️ Цэс нуугдсан тул үндсэн блок бүтэн өргөнд тархаж, агуулга
      зүүн тийш наалддаг. Өргөнийг хязгаарлаж ТӨВЛҮҮЛНЭ. */
   .block-container {
-    max-width: 72rem !important;
+    max-width: 70rem !important;
     margin: 0 auto !important;
-    padding: 2.4rem 2.5rem 3rem !important;
+    padding: 1.2rem 2rem 1.4rem !important;
   }
 
   /* Хоёр самбарын хооронд бодит зай */
@@ -888,19 +920,25 @@ def _write_atomic(path: Path, write) -> Path:
 
 
 @st.cache_data(show_spinner=False)
-def run_analysis(file_bytes: bytes, file_name: str) -> dict:
+def run_analysis(file_bytes: bytes, file_name: str,
+                 calculation_month: str | None = None,
+                 lookback_months: int | None = None) -> dict:
     # ⚠️ Нэрийг агуулгаар нь өвөрмөц болгоно — ижил нэртэй өөр файл
     #    оруулсан хоёр хэрэглэгч бие биенийхээ өгөгдлийг дарахгүй.
     safe = f"{_digest(file_bytes)}_{Path(file_name).name}"
     src = _write_atomic(TMP_DIR / safe, lambda dst: dst.write_bytes(file_bytes))
-    return collect(src)
+    return collect(src, calculation_month=calculation_month,
+                   lookback_months=lookback_months)
 
 
 @st.cache_data(show_spinner=False)
-def build_excel(file_bytes: bytes, file_name: str) -> bytes:
-    data = run_analysis(file_bytes, file_name)
+def build_excel(file_bytes: bytes, file_name: str,
+                calculation_month: str | None = None,
+                lookback_months: int | None = None) -> bytes:
+    data = run_analysis(file_bytes, file_name, calculation_month, lookback_months)
+    tag = f"{calculation_month or 'def'}_{lookback_months or 'def'}"
     out = _write_atomic(
-        TMP_DIR / f"report_{_digest(file_bytes)}.xlsx",
+        TMP_DIR / f"report_{_digest(file_bytes)}_{tag}.xlsx",
         lambda dst: build_workbook(data, dst),
     )
     return out.read_bytes()
@@ -947,6 +985,11 @@ def panel_open(title: str, hint: str = "") -> None:
         + "</div>",
         unsafe_allow_html=True,
     )
+
+
+def code_name(code: str, name: str | None) -> str:
+    """`код — нэр` хосолсон харагдац. Нэр байхгүй бол зөвхөн код."""
+    return f"{code} — {name}" if name else str(code)
 
 
 def status_badge(status: str) -> str:
@@ -996,7 +1039,11 @@ def render_matrix(matrix: list[dict]) -> None:
                 f"<td><div class='ii-cell' style='background:{tone['bg']};color:{tone['fg']}'>"
                 f"<div class='top'>{c['abcXyz']}<span>{share(c['salesShare'])}</span></div>"
                 f"<div class='kv'><i>SKU</i><b>{c['skuCount']:,}</b></div>"
-                f"<div class='kv'><i>Дүн</i><b>{c['salesValue']:,.0f}</b></div>"
+                f"<div class='kv'><i>НӨАТ-гүй дүн</i><b>"
+                + (f"{c['netSales']:,.0f}" if c.get('netSales') is not None
+                   else NOT_AVAILABLE)
+                + "</b></div>"
+                + f"<div class='kv'><i>Өртөг</i><b>{c['salesValue']:,.0f}</b></div>"
                 f"<div class='kv'><i>Нөөц</i><b>{c['currentStock']:,.0f}</b></div>"
                 f"<div class='kv'><i>Зохистой</i><b>{c['recommendedStock']:,.0f}</b></div>"
                 f"<div class='kv'><i>Эрсдэл</i><b>{c['riskCount']:,}</b></div>"
@@ -1048,16 +1095,19 @@ def inventory_table(rows: list) -> pd.DataFrame:
     return pd.DataFrame([{
         "Код": r.position.product_code,
         "Нэр": r.position.product_name or NOT_AVAILABLE,
-        "Байршил": r.position.location_code,
+        "Салбар": r.position.location_code,
         "ХХК": r.position.company_code or NOT_AVAILABLE,
         "Хос": r.position.abc_xyz,
+        "НӨАТ-гүй дүн": (None if r.position.net_sales_amount is None
+                        else round(r.position.net_sales_amount)),
+        "Өртөг": round(r.position.sales_value),
         "Сарын дундаж": round(r.position.average_monthly_sales, 1),
-        "Үлдэгдэл": round(r.balance.current_stock, 1),
+        "Үлдэгдэл (ш)": round(r.balance.current_stock, 1),
         "Нөөцийн хоног": round(r.balance.current_stock_days, 1),
         "Зорилтот хоног": r.balance.target_days,
         "Зохистой нөөц": round(r.balance.recommended_stock, 1),
-        "Дутагдал": round(r.balance.shortage, 1),
-        "Илүүдэл": round(r.balance.excess, 1),
+        "Дутагдал (ш)": round(r.balance.shortage, 1),
+        "Илүүдэл (ш)": round(r.balance.excess, 1),
         "Төлөв": STATUS_TONE[r.stock_status]["labelMn"],
         "Шилжиж ирэх": r.transfer_in_qty,
         "Худалдан авах": r.new_purchase_qty,
@@ -1132,6 +1182,15 @@ def status_page(view: dict, meta: dict, status: str, title: str, subtitle: str) 
 # ─────────────────────────────────────────────────────────────────────
 # Хуудсууд
 # ─────────────────────────────────────────────────────────────────────
+
+#: Эрсдэлийн ангилал бүрийн дүрс — тохиргооны кодоор
+RISK_ICON = {
+    "CRITICAL": "⚠️",
+    "WARNING": "🕐",
+    "HEALTHY": "✅",
+    "OVERSTOCK": "📚",
+}
+
 
 def kpi_card(label: str, hue: str, icon: str, value: str,
              unit: str = "", foot: str = "") -> str:
@@ -1236,16 +1295,56 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
             unsafe_allow_html=True,
         )
 
-    # ── KPI мөр ──
-    cards = [kpi_card("Нийт", "#2563eb", "📦", f"{total_value:,.0f} ₮",
-                      f"{sum(r.balance.current_stock for r in rows):,.0f} ширхэг",
+    # ── 1-р мөр: БОРЛУУЛАЛТ — дүнг хоёр салгасан ──
+    kp = {k["key"]: k for k in view["kpis"]}
+
+    def money_or_na(item: dict) -> tuple[str, str]:
+        """(утга, доод тайлбар) — байхгүй бол N/A ба шалтгаан."""
+        if item["value"] is None:
+            return NOT_AVAILABLE, esc(item.get("unavailable_reason") or "")
+        if item["format"] == "percent":
+            return f"{item['value'] * 100:,.1f}%", esc(item.get("sub") or "")
+        return f"{item['value']:,.0f}", esc(item.get("sub") or "")
+
+    sales_cards = []
+    for key, hue, icon, unit in [
+        ("revenue", "#078b4e", "💰", "НӨАТ-гүй"),
+        ("salesValue", "#2563eb", "🧾", "өртөг"),
+        ("grossProfit", "#7c5cd6", "📈", "орлого − өртөг"),
+        ("grossMargin", "#b8730a", "%", "ашиг ÷ орлого"),
+        ("salesQty", "#3a4d63", "📦", "ширхэг"),
+    ]:
+        item = kp[key]
+        value, foot = money_or_na(item)
+        if key == "salesQty":
+            value = NOT_AVAILABLE if item["value"] is None else f"{item['value']:,.0f}"
+        sales_cards.append(
+            kpi_card(item["label_mn"], hue, icon, value, unit, foot)
+        )
+    st.markdown(f"<div class='sm-kpis'>{''.join(sales_cards)}</div>",
+                unsafe_allow_html=True)
+
+    # ⚠️ Орлого N/A бол ЯАГААД гэдгийг ил хэлнэ — тоо зохиохгүй
+    if not view["has_revenue"]:
+        st.markdown(
+            "<div class='ii-warn'>Ашиг · ашгийн хувь тооцоологдоогүй: "
+            f"{esc(kp['revenue'].get('unavailable_reason') or '')}. "
+            "Sales хуудсанд тэр багана нэмээд дахин оруулбал автоматаар "
+            "тооцогдоно.</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── 2-р мөр: НӨӨЦИЙН ӨРТӨГ эрсдэлийн ангиллаар ──
+    cards = [kpi_card("Нийт нөөц", "#2563eb", "📦", f"{total_value:,.0f}",
+                      f"{sum(r.balance.current_stock for r in rows):,.0f} ширхэг · өртөг",
                       f"<b>{scope['positions']:,}</b> байрлал")]
     for g in groups:
         cards.append(kpi_card(
             g["label_mn"], g["hue"],
-            {"RISK": "⚠️", "WATCH": "🕐", "HEALTHY": "✅", "EXCESS": "📚"}[g["code"]],
-            f"{g['value']:,.0f} ₮",
-            f"{g['quantity']:,.0f} ширхэг",
+            # ⚠️ Түлхүүр нь тохиргооны riskClasses кодтой ЯГ таарна
+            RISK_ICON.get(g["code"], "•"),
+            f"{g['value']:,.0f}",
+            f"{g['quantity']:,.0f} ширхэг · өртөг",
             f"<b>{g['count']:,}</b> байрлал · {share(g['share'])}",
         ))
     st.markdown(f"<div class='sm-kpis'>{''.join(cards)}</div>", unsafe_allow_html=True)
@@ -1285,10 +1384,10 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
              f"{purchase_qty:,} ш"),
             ("🏷️", "Үнэ анхааруулга", "#f5a524",
              f"{len(view['margin_risk_codes']):,} SKU",
-             f"{saving:,.0f} ₮"),
+             f"{saving:,.0f}"),
             ("🕐", "Хөдөлгөөнгүй SKU", "#8b5cf6",
              f"{len({r.position.product_code for r in stagnant}):,} SKU",
-             f"{sum(r.position.current_stock_value for r in stagnant):,.0f} ₮"),
+             f"{sum(r.position.current_stock_value for r in stagnant):,.0f}"),
         ]
         body = "".join(
             f"<div class='sm-item'>"
@@ -1313,7 +1412,7 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
                           key=lambda r: r.shortage_value or 0)
         body = [[
             f"<span class='nm' title='{esc(r.position.product_name or '')}'>"
-            f"{esc(r.position.product_code)}</span>",
+            f"{esc(code_name(r.position.product_code, r.position.product_name))}</span>",
             esc(r.position.location_code),
             f"{r.balance.shortage:,.0f}",
             f"{r.shortage_value or 0:,.0f}",
@@ -1325,8 +1424,8 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
         st.markdown(
             "<div class='sm-panel'><h3>Эрсдэлтэй ТОП 10</h3>"
             "<p class='hint'>Дутагдлын мөнгөн дүнгээр</p>"
-            + render_table([("SKU", "nm"), ("Байршил", ""), ("Дутагдал", "num"),
-                            ("Дүн ₮", "num"), ("Нөөц", "num")], body)
+            + render_table([("Бүтээгдэхүүн", "nm"), ("Салбар", ""), ("Дутагдал (ш)", "num"),
+                            ("Дүн", "num"), ("Нөөц хоног", "num")], body)
             + "</div>",
             unsafe_allow_html=True,
         )
@@ -1335,7 +1434,7 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
         picked = sorted(view["transfers"], key=lambda t: -t.quantity)[:10]
         body = [[
             f"<span class='nm' title='{esc(view['name_by_code'].get(t.product_code) or '')}'>"
-            f"{esc(t.product_code)}</span>",
+            f"{esc(code_name(t.product_code, view['name_by_code'].get(t.product_code)))}</span>",
             esc(t.from_location_code),
             esc(t.to_location_code),
             f"{t.quantity:,}",
@@ -1344,8 +1443,8 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
         st.markdown(
             "<div class='sm-panel'><h3>Шилжүүлэх ТОП 10</h3>"
             "<p class='hint'>Компани доторхыг эхэлж ашиглана</p>"
-            + render_table([("SKU", "nm"), ("Хаанаас", ""), ("Хаашаа", ""),
-                            ("Тоо", "num"), ("Дүн ₮", "num")], body)
+            + render_table([("Бүтээгдэхүүн", "nm"), ("Хаанаас", ""), ("Хаашаа", ""),
+                            ("Тоо (ш)", "num"), ("Дүн", "num")], body)
             + "</div>",
             unsafe_allow_html=True,
         )
@@ -1359,7 +1458,7 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
             b = bench.get(r.position.product_code)
             body.append([
                 f"<span class='nm' title='{esc(r.position.product_name or '')}'>"
-                f"{esc(r.position.product_code)}</span>",
+                f"{esc(code_name(r.position.product_code, r.position.product_name))}</span>",
                 f"<span class='nm'>{esc(b.min_source_key)}</span>" if b and b.min_source_key
                 else f"<span style='color:var(--muted)'>{NOT_AVAILABLE}</span>",
                 f"{b.min_unit_price:,.0f}" if b and b.min_unit_price is not None
@@ -1369,8 +1468,8 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
         st.markdown(
             "<div class='sm-panel'><h3>Захиалах ТОП 10</h3>"
             "<p class='hint'>Хамгийн хямд нийлүүлэгчтэй нь</p>"
-            + render_table([("SKU", "nm"), ("Нийлүүлэгч", "nm"),
-                            ("Хамгийн бага ₮", "num"), ("Захиалах", "num")], body)
+            + render_table([("Бүтээгдэхүүн", "nm"), ("Нийлүүлэгч", "nm"),
+                            ("Хамгийн бага", "num"), ("Захиалах (ш)", "num")], body)
             + "</div>",
             unsafe_allow_html=True,
         )
@@ -1381,7 +1480,7 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
     tiles = [
         ("❄️", "#2563eb", "Нийт нөөцийн тоо хэмжээ",
          f"{sum(r.balance.current_stock for r in rows):,.0f} ш"),
-        ("⚖️", "#17a34a", "Нийт нөөцийн өртөг", f"{total_value:,.0f} ₮"),
+        ("⚖️", "#17a34a", "Нийт нөөцийн өртөг", f"{total_value:,.0f}"),
         ("🔁", "#8b5cf6", "Шилжүүлгээр хаагдах дутагдал",
          f"{sum(r.transfer_in_qty for r in rows):,} ш"),
         ("📥", "#f5a524", "Захиалах шаардлагатай", f"{purchase_qty:,} ш"),
@@ -1413,7 +1512,8 @@ def page_dashboard(view: dict, data: dict, meta: dict, flt: Filter) -> None:
 def page_inventory_overview(view: dict, meta: dict) -> None:
     page_head("Нөөцийн ерөнхий байдал",
               "Байрлал тус бүрийн баланс, төлөв ба шийдвэр", view, meta)
-    render_kpi_grid(view["kpis"][:7])
+    # Эхний 8 нь мөнгөн үзүүлэлт (орлого · өртөг · нөөц · ашиг)
+    render_kpi_grid(view["kpis"][:8])
     paged_table(
         inventory_table(view["rows"]),
         "inventory_overview",
@@ -1435,11 +1535,11 @@ def page_risk(view: dict, meta: dict) -> None:
             "Код": r["productCode"],
             "Нэр": r["productName"] or NOT_AVAILABLE,
             "Хос": r["abcXyz"],
-            "Байршил": r["locationCode"],
-            "Үлдэгдэл": round(r["currentStock"], 1),
+            "Салбар": r["locationCode"],
+            "Үлдэгдэл (ш)": round(r["currentStock"], 1),
             "Нөөцийн хоног": round(r["stockDays"], 1),
             "Зорилтот хоног": r["targetDays"],
-            "Дутагдал": round(r["shortage"], 1),
+            "Дутагдал (ш)": round(r["shortage"], 1),
             "Дутагдлын дүн": r["shortageValue"],
             "Эрсдэл": r["risk"],
             "Арга хэмжээ": r["action"],
@@ -1455,7 +1555,9 @@ def page_matrix(view: dict, meta: dict) -> None:
         pd.DataFrame([{
             "Хос": c["abcXyz"],
             "SKU": c["skuCount"],
-            "Борлуулалт (₮)": round(c["salesValue"]),
+            "НӨАТ-гүй дүн": (None if c.get("netSales") is None
+                            else round(c["netSales"])),
+            "Өртөг": round(c["salesValue"]),
             "Эзлэх хувь": share(c["salesShare"]),
             "Борлуулсан тоо": round(c["salesQty"]),
             "Одоогийн нөөц": round(c["currentStock"]),
@@ -1491,7 +1593,7 @@ def page_abc_analysis(view: dict, data: dict, meta: dict) -> None:
             "Код": r.product_code,
             "Нэр": r.product_name or NOT_AVAILABLE,
             "ABC": r.abc, "XYZ": r.xyz, "Хос": r.abc_xyz,
-            "Борлуулалт (₮)": round(r.sales_value),
+            "Өртөг": round(r.sales_value),
             "Эзлэх хувь": share(r.sales_share),
             "Хуримтлагдсан": share(r.cumulative_share),
             "Сарын дундаж": round(r.average_monthly_qty, 1),
@@ -1520,10 +1622,10 @@ def page_purchase(view: dict, meta: dict) -> None:
         pd.DataFrame([{
             "Код": r.position.product_code,
             "Нэр": r.position.product_name or NOT_AVAILABLE,
-            "Байршил": r.position.location_code,
+            "Салбар": r.position.location_code,
             "Хос": r.position.abc_xyz,
             "Зохистой нөөц": round(r.balance.recommended_stock, 1),
-            "Үлдэгдэл": round(r.balance.current_stock, 1),
+            "Үлдэгдэл (ш)": round(r.balance.current_stock, 1),
             "Шилжиж ирэх": r.transfer_in_qty,
             "Худалдан авах": r.new_purchase_qty,
             "Шийдвэр": DECISION_TONE[r.decision]["labelMn"],
@@ -1665,7 +1767,7 @@ def page_ai(view: dict, meta: dict) -> None:
             "Ач холбогдол": r["priority"],
             "Код": r["product_code"],
             "Нэр": r["product_name"] or NOT_AVAILABLE,
-            "Байршил": r["location_code"],
+            "Салбар": r["location_code"],
             "Хос": r["abc_xyz"],
             "Эрсдэл": r["risk"],
             "Шалтгаан": r["reason"],
@@ -1717,8 +1819,8 @@ def page_quality(view: dict, meta: dict) -> None:
         pd.DataFrame([{
             "Код": r["productCode"],
             "Нэр": r["productName"] or NOT_AVAILABLE,
-            "Байршил": r["locationCode"],
-            "Үлдэгдэл": round(r["currentStock"], 1),
+            "Салбар": r["locationCode"],
+            "Үлдэгдэл (ш)": round(r["currentStock"], 1),
             "Үнийн дүн": r["stockValue"],
             "Сүүлийн борлуулалт": r["lastSalesPeriod"] or NOT_AVAILABLE,
             "Хэдэн сар": (r["monthsSinceLastSale"]
@@ -2081,6 +2183,46 @@ options = filter_options(data)
 with st.expander(f"📄 {uploaded.name} — өөр файл оруулах"):
     _upload_widget()
 
+# ── Хугацааны сонголт ──
+# ⚠️ Эх өгөгдөлд БАЙГАА саруудаас л сонгоно. Тооцооны сар нь дундажид
+#    ОРДОГГҮЙ тул сүүлийн борлуулалттай сарын ДАРААХ сар анхдагч.
+_periods = meta.get("availablePeriods") or []
+_month_options = sorted(
+    {next_period(p) for p in _periods} | set(_periods), reverse=True
+)
+_default_month = meta["calculationMonth"]
+
+with st.container(border=True):
+    st.caption("ХУГАЦАА")
+    tcol = st.columns([1.2, 1.2, 3.6])
+
+    calc_month = tcol[0].selectbox(
+        "Тооцооны сар", _month_options,
+        index=_month_options.index(_default_month) if _default_month in _month_options else 0,
+        key="calc_month", label_visibility="collapsed",
+        format_func=lambda m: f"Тооцооны сар: {m}",
+    )
+    lookback = tcol[1].selectbox(
+        "Хайх хугацаа", [3, 6, 9, 12],
+        index=[3, 6, 9, 12].index(meta.get("lookbackMonths", 6))
+        if meta.get("lookbackMonths", 6) in (3, 6, 9, 12) else 1,
+        key="lookback", label_visibility="collapsed",
+        format_func=lambda n: f"Сүүлийн {n} сар",
+    )
+    # Тайлбар мөр хасагдсан — сонголтууд өөрсдөө ойлгомжтой.
+
+# Сонголт өөрчлөгдсөн бол ДАХИН тооцоолно
+if (calc_month != meta["calculationMonth"]
+        or lookback != meta.get("lookbackMonths")):
+    try:
+        with st.spinner("Дахин тооцоолж байна…"):
+            data = run_analysis(file_bytes, uploaded.name, calc_month, lookback)
+        meta = data["meta"]
+        options = filter_options(data)
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"Сонгосон хугацаагаар тооцоолж чадсангүй: {exc}")
+        st.stop()
+
 # ── Шүүлтүүрийн зурвас ──
 # ⚠️ Шошгыг ЧӨЛӨӨТ markdown-аар тавихад дээрх элемент дарж таллаа
 #    тасалж байсан. Streamlit-ийн жинхэнэ сав ашиглавал байрлалыг
@@ -2095,50 +2237,44 @@ with bar[0]:
     product_codes = st.multiselect(
         "Бүтээгдэхүүн",
         options=list(product_name_by_code),
-        format_func=lambda c: f"{c} · {product_name_by_code[c]}"
-        if product_name_by_code.get(c) else c,
-        placeholder="Бүх бүтээгдэхүүн",
+        format_func=lambda c: code_name(c, product_name_by_code.get(c)),
+        placeholder="Бүтээгдэхүүн",
         label_visibility="collapsed",
     )
 
 with bar[1]:
-    company = st.selectbox(
-        "ХХК",
-        options=[None] + [c["code"] for c in options["companies"]],
-        format_func=lambda c: "Бүх ХХК" if c is None else c,
-        label_visibility="collapsed",
+    # ⚠️ Хоосон = хязгаарлахгүй. «Бүх ХХК» гэсэн зохиомол мөр хэрэггүй.
+    companies = st.multiselect(
+        "ХХК", [c["code"] for c in options["companies"]],
+        placeholder="ХХК", label_visibility="collapsed",
     )
 
 with bar[2]:
-    loc_type = st.selectbox(
-        "Байршлын төрөл",
-        options=[None] + [t["code"] for t in options["location_types"]],
-        format_func=lambda t: "Бүх төрөл" if t is None else next(
-            x["label_mn"] for x in options["location_types"] if x["code"] == t),
-        label_visibility="collapsed",
+    _type_label = {x["code"]: x["label_mn"] for x in options["location_types"]}
+    loc_types = st.multiselect(
+        "Салбарын төрөл", list(_type_label),
+        format_func=lambda c: _type_label[c],
+        placeholder="Салбарын төрөл", label_visibility="collapsed",
     )
+    loc_type = loc_types[0] if len(loc_types) == 1 else None
 
-# ⭐ Шатлал: ХХК → байршлын төрөл → суваг/байршил
+# ⭐ Шатлал: ХХК → салбарын төрөл → салбар
 visible_locations = [
     loc for loc in options["locations"]
-    if (company is None or loc["company_code"] == company)
-    and (loc_type is None or loc["type"] == loc_type)
+    if (not companies or loc["company_code"] in companies)
+    and (not loc_types or loc["type"] in loc_types)
 ]
 
 with bar[3]:
-    location = st.selectbox(
-        "Суваг / Байршил",
-        options=[None] + [loc["code"] for loc in visible_locations],
-        format_func=lambda c: "Бүх суваг / байршил" if c is None else c,
-        label_visibility="collapsed",
+    locations = st.multiselect(
+        "Салбар", [loc["code"] for loc in visible_locations],
+        placeholder="Салбар", label_visibility="collapsed",
     )
 
 with bar[4]:
-    manufacturer = st.selectbox(
-        "Үйлдвэрлэгч",
-        options=[None] + options["manufacturers"],
-        format_func=lambda m: "Бүх үйлдвэрлэгч" if m is None else m,
-        label_visibility="collapsed",
+    manufacturers = st.multiselect(
+        "Үйлдвэрлэгч", options["manufacturers"],
+        placeholder="Үйлдвэрлэгч", label_visibility="collapsed",
     )
 
 with bar[5]:
@@ -2150,7 +2286,7 @@ with bar[5]:
         try:
             st.download_button(
                 "Excel тайлан",
-                data=build_excel(file_bytes, uploaded.name),
+                data=build_excel(file_bytes, uploaded.name, calc_month, lookback),
                 file_name=f"inventory-report-{meta['calculationMonth']}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
@@ -2160,11 +2296,15 @@ with bar[5]:
 
 flt = Filter(
     product_codes=list(product_codes),
-    company_codes=[company] if company else [],
+    company_codes=list(companies),
     location_type=loc_type,
-    location_codes=[location] if location else [],
-    manufacturers=[manufacturer] if manufacturer else [],
+    location_codes=list(locations),
+    manufacturers=list(manufacturers),
 )
+# ⚠️ Хоёр ба түүнээс дээш төрөл сонгосон бол Filter.location_type-аар
+#    илэрхийлэх боломжгүй тул салбарын кодоор шүүнэ.
+if len(loc_types) > 1 and not locations:
+    flt.location_codes = [loc["code"] for loc in visible_locations]
 
 view = build_view(data, flt)
 

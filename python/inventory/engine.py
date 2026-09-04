@@ -401,6 +401,9 @@ class Position:
     sales_value: float = 0.0
     #: Үйлдвэрлэгч — эх өгөгдлийн `Manufacturer` баганаас
     manufacturer: str | None = None
+    #: Борлуулалтын ОРЛОГО (НӨАТ-гүй). Багана байхгүй бол None —
+    #: ямар ч тоо зохиохгүй, ашгийн үзүүлэлт N/A хэвээр үлдэнэ.
+    net_sales_amount: float | None = None
 
 
 @dataclass

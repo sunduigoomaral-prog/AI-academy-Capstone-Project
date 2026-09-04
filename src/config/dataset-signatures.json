@@ -1,92 +1,288 @@
 {
   "version": 2,
   "_comment": "SHEET DETECTION + COLUMN MAPPING LAYER. TypeScript (src/services/import/sheet-detector.ts) ба Python (python/ingest/) ХОЁУЛАА ЭНЭ ФАЙЛЫГ уншина. Sheet-ийн НЭР шийдэхгүй — баганын бүтэц (role) шийднэ. nameHints нь зөвхөн оноо тэнцсэн үед л нэмэлт жин өгнө.",
-
   "matching": {
     "caseInsensitive": true,
     "trimWhitespace": true,
     "collapseInnerWhitespace": true
   },
-
-  "_roleAliasesComment": "role → хүлээн зөвшөөрөгдөх эх баганын нэрс. Эхний утга нь одоогийн эх файлын БОДИТ нэр. Бусад нь ирээдүйн файлуудад зориулсан.",
+  "_roleAliasesComment": "role → хүлээн зөвшөөрөгдөх эх баганын нэрс. Эхний утга нь одоогийн эх файлын БОДИТ нэр. Бусад нь ирээдүйн файлуудад зориулсан. ⚠️ `amountExVat`-д ЗАЛГААГҮЙ «НӨАТгүй дүн» бичихгүй — SALES хуудасны disqualifyingRoles-д тэр роль байдаг тул борлуулалтын хуудсыг хасна. Борлуулалтын НӨАТ-гүй дүн нь `salesAmountExVat` рольд харьяалагдана.",
   "roleAliases": {
-    "productCode": ["Дотоод код", "Барааны код", "Product code", "SKU"],
-    "productName": ["Бүтээгдэхүүний нэрс", "Барааны нэр", "Product name"],
-    "manufacturer": ["Үйлдвэрлэгч", "Manufacturer"],
-    "exclusivity": ["Ангилал", "Category"],
-    "supplierCode": ["ТА харилцагч", "Нийлүүлэгч", "Supplier"],
-    "quantity": ["Тоо", "Тоо хэмжээ", "Quantity", "Qty"],
-    "cogsAmount": ["Өртөг", "Cost", "COGS"],
-    "amountExVat": ["ТА НӨАТгүй дүн", "НӨАТгүй дүн", "Amount ex VAT"],
-    "quantityOnHand": ["Үлдэглэл", "Үлдэгдэл", "Stock", "On hand"],
-    "stockValue": ["Өртөг", "Cost", "Stock value"],
-    "year": ["Он", "Year"],
-    "month": ["Сар", "Month"],
-    "locationType": ["Төрөл", "Location type"],
-    "locationCode": ["Суваг", "Байршил", "Location"],
-    "companyCode": ["ХХК", "Компани", "Company"],
-    "locationName": ["Байршлын нэр", "Location name"],
-    "channelCode": ["Сувгийн код", "Channel code"],
-    "channelName": ["Сувгийн нэр", "Channel name"],
-    "atcCode": ["ATC", "ATC код"],
-    "packSize": ["Савлагаа", "Pack size"]
+    "productCode": [
+      "Дотоод код",
+      "Барааны код",
+      "Product code",
+      "SKU"
+    ],
+    "productName": [
+      "Бүтээгдэхүүний нэрс",
+      "Барааны нэр",
+      "Product name"
+    ],
+    "manufacturer": [
+      "Үйлдвэрлэгч",
+      "Manufacturer"
+    ],
+    "exclusivity": [
+      "Ангилал",
+      "Category"
+    ],
+    "supplierCode": [
+      "ТА харилцагч",
+      "Нийлүүлэгч",
+      "Supplier"
+    ],
+    "quantity": [
+      "Тоо",
+      "Тоо хэмжээ",
+      "Quantity",
+      "Qty"
+    ],
+    "cogsAmount": [
+      "Өртөг",
+      "Cost",
+      "COGS"
+    ],
+    "amountExVat": [
+      "ТА НӨАТгүй дүн",
+      "ТА НӨАТ-гүй дүн",
+      "Татан авсан НӨАТгүй дүн",
+      "Татан авсан НӨАТ-гүй дүн",
+      "Татан авалтын НӨАТгүй дүн",
+      "Татан авалтын дүн",
+      "Purchase amount ex VAT",
+      "Amount ex VAT"
+    ],
+    "quantityOnHand": [
+      "Үлдэглэл",
+      "Үлдэгдэл",
+      "Stock",
+      "On hand"
+    ],
+    "stockValue": [
+      "Өртөг",
+      "Cost",
+      "Stock value"
+    ],
+    "year": [
+      "Он",
+      "Year"
+    ],
+    "month": [
+      "Сар",
+      "Month"
+    ],
+    "locationType": [
+      "Төрөл",
+      "Location type"
+    ],
+    "locationCode": [
+      "Суваг",
+      "Байршил",
+      "Location"
+    ],
+    "companyCode": [
+      "ХХК",
+      "Компани",
+      "Company"
+    ],
+    "locationName": [
+      "Байршлын нэр",
+      "Location name"
+    ],
+    "channelCode": [
+      "Сувгийн код",
+      "Channel code"
+    ],
+    "channelName": [
+      "Сувгийн нэр",
+      "Channel name"
+    ],
+    "atcCode": [
+      "ATC",
+      "ATC код"
+    ],
+    "packSize": [
+      "Савлагаа",
+      "Pack size"
+    ],
+    "salesAmountExVat": [
+      "Худалдах НӨАТ-Гүй дүн",
+      "Худалдах НӨАТ-гүй дүн",
+      "Худалдах НӨАТгүй дүн",
+      "Худалдсан НӨАТ-гүй дүн",
+      "Борлуулалтын НӨАТ-гүй дүн",
+      "Борлуулалтын НӨАТгүй дүн",
+      "Борлуулалтын дүн",
+      "НӨАТ-гүй дүн",
+      "НӨАТ гүй дүн",
+      "Sales amount ex VAT",
+      "Net sales"
+    ]
   },
-
   "_datasetsComment": "requiredRoles бүгд олдвол л тухайн dataset-д нэр дэвшинэ. disqualifyingRoles-ийн аль нэг олдвол шууд хасагдана.",
   "datasets": [
     {
       "type": "SALES",
       "labelMn": "Борлуулалт",
-      "nameHints": ["sales", "sale", "борлуулалт"],
-      "requiredRoles": ["productCode", "quantity", "cogsAmount", "year", "month"],
-      "optionalRoles": ["productName", "manufacturer", "exclusivity", "locationType", "locationCode", "companyCode"],
-      "disqualifyingRoles": ["amountExVat", "quantityOnHand"]
+      "nameHints": [
+        "sales",
+        "sale",
+        "борлуулалт"
+      ],
+      "requiredRoles": [
+        "productCode",
+        "quantity",
+        "cogsAmount",
+        "year",
+        "month"
+      ],
+      "optionalRoles": [
+        "productName",
+        "manufacturer",
+        "exclusivity",
+        "locationType",
+        "locationCode",
+        "companyCode"
+      ],
+      "disqualifyingRoles": [
+        "amountExVat",
+        "quantityOnHand"
+      ]
     },
     {
       "type": "PURCHASE",
       "labelMn": "Худалдан авалт",
-      "nameHints": ["purchase", "purchases", "худалдан авалт", "татан авалт"],
-      "requiredRoles": ["productCode", "quantity", "amountExVat", "year", "month"],
-      "optionalRoles": ["productName", "manufacturer", "exclusivity", "supplierCode", "locationType", "locationCode", "companyCode"],
-      "disqualifyingRoles": ["quantityOnHand"]
+      "nameHints": [
+        "purchase",
+        "purchases",
+        "худалдан авалт",
+        "татан авалт"
+      ],
+      "requiredRoles": [
+        "productCode",
+        "quantity",
+        "amountExVat",
+        "year",
+        "month"
+      ],
+      "optionalRoles": [
+        "productName",
+        "manufacturer",
+        "exclusivity",
+        "supplierCode",
+        "locationType",
+        "locationCode",
+        "companyCode"
+      ],
+      "disqualifyingRoles": [
+        "quantityOnHand"
+      ]
     },
     {
       "type": "STOCK",
       "labelMn": "Үлдэгдэл",
-      "nameHints": ["stock", "inventory", "үлдэгдэл", "нөөц"],
-      "requiredRoles": ["productCode", "quantityOnHand", "year", "month"],
-      "optionalRoles": ["productName", "manufacturer", "exclusivity", "stockValue", "locationType", "locationCode", "companyCode"],
-      "disqualifyingRoles": ["amountExVat", "quantity"]
+      "nameHints": [
+        "stock",
+        "inventory",
+        "үлдэгдэл",
+        "нөөц"
+      ],
+      "requiredRoles": [
+        "productCode",
+        "quantityOnHand",
+        "year",
+        "month"
+      ],
+      "optionalRoles": [
+        "productName",
+        "manufacturer",
+        "exclusivity",
+        "stockValue",
+        "locationType",
+        "locationCode",
+        "companyCode"
+      ],
+      "disqualifyingRoles": [
+        "amountExVat",
+        "quantity"
+      ]
     },
     {
       "type": "PRODUCT",
       "labelMn": "Бүтээгдэхүүний лавлах",
       "_comment": "Одоогийн эх файлд БАЙХГҮЙ. Master sheet ирвэл автоматаар танигдана.",
-      "nameHints": ["product", "products", "item", "бүтээгдэхүүн", "бараа"],
-      "requiredRoles": ["productCode", "productName"],
-      "optionalRoles": ["manufacturer", "exclusivity", "atcCode", "packSize"],
-      "disqualifyingRoles": ["year", "month", "quantity", "quantityOnHand", "amountExVat"]
+      "nameHints": [
+        "product",
+        "products",
+        "item",
+        "бүтээгдэхүүн",
+        "бараа"
+      ],
+      "requiredRoles": [
+        "productCode",
+        "productName"
+      ],
+      "optionalRoles": [
+        "manufacturer",
+        "exclusivity",
+        "atcCode",
+        "packSize"
+      ],
+      "disqualifyingRoles": [
+        "year",
+        "month",
+        "quantity",
+        "quantityOnHand",
+        "amountExVat"
+      ]
     },
     {
       "type": "LOCATION",
       "labelMn": "Байршлын лавлах",
       "_comment": "Одоогийн эх файлд БАЙХГҮЙ.",
-      "nameHints": ["location", "locations", "branch", "байршил", "салбар"],
-      "requiredRoles": ["locationCode", "locationType"],
-      "optionalRoles": ["locationName", "companyCode"],
-      "disqualifyingRoles": ["productCode", "year", "month"]
+      "nameHints": [
+        "location",
+        "locations",
+        "branch",
+        "байршил",
+        "салбар"
+      ],
+      "requiredRoles": [
+        "locationCode",
+        "locationType"
+      ],
+      "optionalRoles": [
+        "locationName",
+        "companyCode"
+      ],
+      "disqualifyingRoles": [
+        "productCode",
+        "year",
+        "month"
+      ]
     },
     {
       "type": "CHANNEL",
       "labelMn": "Сувгийн лавлах",
       "_comment": "Одоогийн эх файлд БАЙХГҮЙ. Excel-ийн 'Суваг' багана нь бодит утгаараа БАЙРШИЛ тул энэ dataset-д тооцогдохгүй — тусдаа 'Сувгийн код' баганатай sheet л таарна.",
-      "nameHints": ["channel", "channels"],
-      "requiredRoles": ["channelCode", "channelName"],
+      "nameHints": [
+        "channel",
+        "channels"
+      ],
+      "requiredRoles": [
+        "channelCode",
+        "channelName"
+      ],
       "optionalRoles": [],
-      "disqualifyingRoles": ["productCode", "year", "month", "quantity"]
+      "disqualifyingRoles": [
+        "productCode",
+        "year",
+        "month",
+        "quantity"
+      ]
     }
   ],
-
   "_valueMapsComment": "Эх өгөгдлийн монгол нэршил → нормчилсон утга. Түлхүүрүүд нь трим + том үсэг болгосны дараа харьцуулагдана.",
   "valueMaps": {
     "locationType": {
@@ -104,9 +300,11 @@
       "NONEX": "NON_EX"
     }
   },
-
   "locationCodePrefixRule": {
     "_comment": "Бодит өгөгдөл дээр 100% батлагдсан: 3xxxxx = агуулах, 4xxxxx = эмийн сан. 'Төрөл' баганатай зөрчилдвөл LOCATION_TYPE_CONFLICT (ERROR) — чимээгүй засахгүй.",
-    "prefixes": { "3": "WAREHOUSE", "4": "PHARMACY" }
+    "prefixes": {
+      "3": "WAREHOUSE",
+      "4": "PHARMACY"
+    }
   }
 }

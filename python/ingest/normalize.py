@@ -203,6 +203,7 @@ def normalize_row(dataset_type: str, raw: dict[str, Any]) -> dict[str, Any]:
         "quantity": is_present(raw.get("quantity")),
         "cogsAmount": is_present(raw.get("cogsAmount")),
         "amountExVat": is_present(raw.get("amountExVat")),
+        "salesAmountExVat": is_present(raw.get("salesAmountExVat")),
         "quantityOnHand": is_present(raw.get("quantityOnHand")),
         "stockValue": is_present(raw.get("stockValue")),
     }
@@ -227,10 +228,13 @@ def normalize_row(dataset_type: str, raw: dict[str, Any]) -> dict[str, Any]:
     if dataset_type == "SALES":
         qty = coerce(raw.get("quantity"), "quantity")
         amount = coerce(raw.get("cogsAmount"), "cogsAmount")
+        # ⚠️ Борлуулалтын ОРЛОГО — «Худалдах НӨАТ-гүй дүн» багана байвал л.
+        #    Байхгүй бол None хэвээр: тоо ЗОХИОХГҮЙ.
+        net_sales = coerce(raw.get("salesAmountExVat"), "salesAmountExVat")
         row.update(
             quantity=qty,
             cogs_amount=amount,
-            net_sales_amount=None,  # эх өгөгдөлд орлого БАЙХГҮЙ
+            net_sales_amount=net_sales,
             is_return=qty is not None and qty < 0,
             unit_cogs=(amount / qty) if (qty not in (None, 0) and amount is not None) else None,
         )

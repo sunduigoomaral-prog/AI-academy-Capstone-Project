@@ -50,8 +50,15 @@ def _period_index(periods: list[str]) -> dict[str, int]:
     return {p: i for i, p in enumerate(periods)}
 
 
-def collect(excel: Path, scope: str = "ALL") -> dict:
-    settings = Settings()
+def collect(
+    excel: Path,
+    scope: str = "ALL",
+    calculation_month: str | None = None,
+    lookback_months: int | None = None,
+) -> dict:
+    """⚠️ `calculation_month` / `lookback_months` өгөөгүй бол
+    `analysis-defaults.json`-ы утгыг ашиглана."""
+    settings = Settings(calculation_month, lookback_months, scope)
     periods = lookback_periods(settings.calculation_month, settings.lookback_months)
     params = StatusParams.defaults()
     rules = load_rules()
@@ -86,9 +93,9 @@ def collect(excel: Path, scope: str = "ALL") -> dict:
     name_by_code = {r.product_code: r.product_name for r in abc_rows}
 
     # ── Нөөц (Phase 4) ──
-    positions, _ = build_positions(excel, periods, settings.calculation_month,
-                                   settings.abc_a, settings.abc_b,
-                                   settings.xyz_x, settings.xyz_y, scope)
+    positions, pos_meta = build_positions(excel, periods, settings.calculation_month,
+                                          settings.abc_a, settings.abc_b,
+                                          settings.xyz_x, settings.xyz_y, scope)
     inv = optimize(positions, policy, params)
 
     # ── Үнэ (Phase 5) ──
@@ -264,6 +271,9 @@ def collect(excel: Path, scope: str = "ALL") -> dict:
             "sourceFile": excel.name,
             "calculationMonth": settings.calculation_month,
             "periods": periods,
+            "availablePeriods": pos_meta.get("available_periods", []),
+            "lookbackMonths": settings.lookback_months,
+            "hasNetSales": pos_meta.get("has_net_sales", False),
             "skuCount": len(abc_rows),
             "locationCount": inv.summary["locations"],
             "totalSalesValue": sum(r.sales_value for r in abc_rows),

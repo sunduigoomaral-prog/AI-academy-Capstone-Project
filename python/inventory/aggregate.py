@@ -53,6 +53,11 @@ def build_positions(
     period_set = set(periods)
     sales_qty: dict[tuple[str, str], float] = {}
     sales_value: dict[tuple[str, str], float] = {}
+    #: Орлого — багана байгаа мөрүүд дээр л хуримтлагдана
+    net_sales: dict[tuple[str, str], float] = {}
+    has_net_sales = False
+    #: Эх өгөгдөлд БАЙГАА бүх сар — хэрэглэгчид сонгуулахад ашиглана
+    seen_periods: set[str] = set()
     stock_qty: dict[tuple[str, str], float] = {}
     stock_value: dict[tuple[str, str], float] = {}
     location_meta: dict[str, dict] = {}
@@ -81,6 +86,8 @@ def build_positions(
             )
 
             key = (code, location)
+            if row.get("period_key"):
+                seen_periods.add(row["period_key"])
             if dataset == "SALES":
                 if row.get("period_key") in period_set:
                     sales_qty[key] = sales_qty.get(key, 0.0) + float(row.get("quantity") or 0.0)
@@ -88,6 +95,10 @@ def build_positions(
                     sales_value[key] = (
                         sales_value.get(key, 0.0) + float(row.get("cogs_amount") or 0.0)
                     )
+                    revenue = row.get("net_sales_amount")
+                    if revenue is not None:
+                        has_net_sales = True
+                        net_sales[key] = net_sales.get(key, 0.0) + float(revenue)
             elif dataset == "STOCK" and row.get("period_key") == stock_period:
                 stock_qty[key] = stock_qty.get(key, 0.0) + float(row.get("quantity_on_hand") or 0.0)
                 stock_value[key] = stock_value.get(key, 0.0) + float(row.get("stock_value") or 0.0)
@@ -129,11 +140,16 @@ def build_positions(
                 sales_qty=sales_qty.get((code, location), 0.0),
                 sales_value=sales_value.get((code, location), 0.0),
                 manufacturer=(master.products.get(code) or {}).get("manufacturer_name"),
+                # ⚠️ Багана огт байхгүй бол None — 0 гэж таамаглахгүй
+                net_sales_amount=(net_sales.get((code, location), 0.0)
+                                  if has_net_sales else None),
             )
         )
 
     meta = {
         **agg_meta,
+        "has_net_sales": has_net_sales,
+        "available_periods": sorted(seen_periods),
         "positions": len(positions),
         "locations": len({p.location_code for p in positions}),
         "skus": len({p.product_code for p in positions}),
